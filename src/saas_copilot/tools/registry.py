@@ -43,6 +43,13 @@ class ToolRegistry:
     def names(self) -> list[str]:
         return sorted(self._tools)
 
+    def specs(self) -> list[ToolSpec]:
+        """All registered specs, name-sorted - lets a prompt be built *from* the
+        registry (Episode 6) instead of hand-listing tool names/args in prompt text
+        that can silently drift out of sync with what's actually registered.
+        """
+        return [self._tools[name] for name in self.names()]
+
     def call(self, name: str, raw_args: dict[str, Any]) -> Any:
         """Validate `raw_args` against the tool's schema, then run it under a timeout.
 
