@@ -11,7 +11,7 @@ import pytest
 
 from saas_copilot.config import Settings
 from saas_copilot.security.roles import UnknownRoleError
-from saas_copilot.tools import build_default_registry
+from saas_copilot.tools import build_default_registry, build_registry_for_role, build_shared_resources
 from saas_copilot.tools.base import ToolError
 
 REPO_ROOT = Path.cwd()
@@ -134,3 +134,34 @@ def test_an_injected_request_to_call_an_unregistered_tool_is_rejected_by_the_all
     # model decided to call X" to "X ran" that skips this lookup.
     with pytest.raises(ToolError, match="unknown tool"):
         _registry().call("delete_all_users", {})
+
+
+def test_shared_resources_can_be_reused_to_build_registries_for_different_roles() -> None:
+    # Episode 14's split: build_shared_resources() does the expensive parsing/AST-walk
+    # work once; build_registry_for_role() is cheap and just rebinds role. Prove the
+    # SAME built resources correctly back two differently-scoped registries.
+    resources = build_shared_resources(Settings(), repo_root=REPO_ROOT)
+
+    lead_registry = build_registry_for_role(resources, role="support_lead")
+    agent_registry = build_registry_for_role(resources, role="support_agent")
+
+    lead_results = lead_registry.call("search_docs", {"query": "force-deactivate a compromised account"})
+    agent_results = agent_registry.call("search_docs", {"query": "force-deactivate a compromised account"})
+
+    assert any(doc.path == "docs/admin-runbook.md" for doc in lead_results)
+    assert not any(doc.path == "docs/admin-runbook.md" for doc in agent_results)
+
+
+def test_build_default_registry_matches_the_split_two_step_build() -> None:
+    # build_default_registry() is now a thin wrapper - same tool set either way.
+    combined = build_default_registry(Settings(), repo_root=REPO_ROOT, role="support_lead")
+    resources = build_shared_resources(Settings(), repo_root=REPO_ROOT)
+    split = build_registry_for_role(resources, role="support_lead")
+
+    assert combined.names() == split.names()
+
+
+def test_build_registry_for_role_still_rejects_an_unknown_role() -> None:
+    resources = build_shared_resources(Settings(), repo_root=REPO_ROOT)
+    with pytest.raises(UnknownRoleError):
+        build_registry_for_role(resources, role="superadmin")
