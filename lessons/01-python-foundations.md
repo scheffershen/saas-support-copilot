@@ -1,5 +1,11 @@
 # Episode 1 — Python project foundations
 
+> **Note (added in Episode 8):** `Document.citation` originally omitted the
+> `#chunk-N` suffix when `chunk_id` was 0, treating 0 as "this document wasn't
+> chunked." Once Episode 8 adds real chunking, chunk 0 is a genuine first chunk, not
+> a sentinel - the citation now always includes it. The `Document`/`SourceFile`
+> concepts below are unchanged; only that one property's exact output is.
+
 **On screen:** `src/saas_copilot/models.py`, empty, in an editor; the Episode 0 repo
 running in a split terminal.
 
