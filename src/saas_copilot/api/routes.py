@@ -26,6 +26,7 @@ from ..memory.orchestration import ask
 from ..memory.store import SessionStore
 from ..telemetry import TracingLLMClient, log_run
 from ..tools import SharedResources, build_shared_resources
+from ..tools.base import ToolError
 from ..tools.registry import ToolRegistry
 from .dependencies import get_llm_client, get_registry, get_session_store, get_shared_resources
 from .schemas import AskRequest, AskResponse, EvaluationsResponse, HealthResponse, IngestResponse
@@ -34,11 +35,23 @@ router = APIRouter()
 
 
 @router.get("/health")
-async def health(resources: SharedResources = Depends(get_shared_resources)) -> HealthResponse:
-    # Cheap on purpose: reads a count off resources already built at startup, never
-    # rebuilds anything. A health check that does real work on every call isn't a
-    # health check, it's a load generator.
-    return HealthResponse(status="ok", docs_indexed=len(resources.docs_index))
+async def health(
+    resources: SharedResources = Depends(get_shared_resources),
+    registry: ToolRegistry = Depends(get_registry),
+) -> HealthResponse:
+    # docs_indexed is cheap - a count off resources already built at startup, never
+    # rebuilt here. The database check (Episode 16) is a real probe, not free, but
+    # still small: one SELECT 1 through query_database, whichever backend that
+    # currently means (SQLite, MySQL in-process, or MySQL via MCP) - reused rather
+    # than reimplemented, so /health exercises the exact path /ask would use.
+    try:
+        await asyncio.to_thread(registry.call, "query_database", {"sql": "SELECT 1", "limit": 1})
+        database_status = "ok"
+    except ToolError:
+        database_status = "unreachable"
+
+    status = "ok" if database_status == "ok" else "degraded"
+    return HealthResponse(status=status, docs_indexed=len(resources.docs_index), database=database_status)
 
 
 @router.post("/ask")

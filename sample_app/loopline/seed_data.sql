@@ -1,5 +1,5 @@
 -- Sample rows for Loopline. Matches sample_app/loopline/app/seed.py (used for the
--- SQLite quickstart); this .sql version is for the MySQL setup in Episode 15.
+-- SQLite quickstart); this .sql version is for the MySQL setup in Episode 16.
 
 INSERT INTO users (id, name, email, role, is_active) VALUES
   (1, 'Amara Diallo', 'amara@loopline.example', 'support_agent', 1),

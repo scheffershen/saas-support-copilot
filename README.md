@@ -7,7 +7,7 @@ for a YouTube course: every episode is one focused, tested change, and the commi
 history *is* the course.
 
 > Learning prototype, not a production-security guarantee. See [`lessons/`](lessons/)
-> for the full arc and Episode 16 for the prototype-vs-production gap list.
+> for the full arc and Episode 17 for the prototype-vs-production gap list.
 
 ## What's fictional here
 
@@ -55,14 +55,37 @@ Run the tests (one is an intentional `xfail` — see [Episode 0](lessons/00-setu
 pytest
 ```
 
+### Optional: MySQL instead of SQLite (Episode 16)
+
+`query_database` runs against SQLite by default — no Docker required. To switch it to
+MySQL, matching Loopline's real target database:
+
+```bash
+# fill in MYSQL_ROOT_PASSWORD and MYSQL_READER_PASSWORD in .env first
+docker compose up -d
+```
+
+Then set `LOOPLINE_READONLY_DATABASE_URL` in `.env` (see `.env.example` for the exact
+form — use `127.0.0.1`, not `localhost`, to avoid a real ~5s IPv6-fallback delay on
+some Windows + Docker Desktop setups). Set `USE_DATABASE_MCP=true` to route
+`query_database` through a standalone MCP server (`mcp_server/server.py`, spawned
+automatically per call) instead of connecting to MySQL in-process - needs the `mysql`
+extra: `pip install -e ".[dev,mysql]"`.
+
+```bash
+docker compose down   # stop MySQL when you're done; add -v to also drop its data volume
+```
+
 ## Repository layout
 
 ```text
 saas-support-copilot/
 ├── pyproject.toml
+├── docker-compose.yml     # optional MySQL, for query_database (Episode 16)
 ├── .env.example
 ├── README.md
 ├── src/saas_copilot/      # the copilot — built episode by episode
+│   └── mcp_server/        # standalone MCP server for query_database (Episode 16)
 ├── sample_app/loopline/   # the fictional target SaaS app (docs, source, schema, logs)
 ├── tests/
 └── lessons/               # per-episode talking points, in order

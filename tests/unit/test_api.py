@@ -17,7 +17,7 @@ from saas_copilot.api.main import app
 from saas_copilot.config import Settings
 from saas_copilot.evals import GOLDEN_CASES
 from saas_copilot.llm.fake import FakeLLMClient
-from saas_copilot.tools import build_shared_resources
+from saas_copilot.tools import build_registry_for_role, build_shared_resources
 
 
 def _route(domain: str) -> str:
@@ -55,12 +55,25 @@ def _use_llm_client(client: FakeLLMClient) -> None:
     app.dependency_overrides[get_llm_client] = lambda: client
 
 
+def _use_sqlite_registry() -> None:
+    # Forces the SQLite query_database backend for this test, regardless of whatever
+    # LOOPLINE_READONLY_DATABASE_URL a developer's own .env happens to have set for
+    # Episode 16's MySQL work - /health's database probe must not depend on that
+    # variable being unset (or MySQL being up) to report "ok" here.
+    resources = build_shared_resources(Settings(loopline_readonly_database_url=""), repo_root=Path.cwd())
+    app.dependency_overrides[get_registry] = lambda: build_registry_for_role(resources, role=None)
+
+
 def test_health_reports_a_real_doc_count(test_client) -> None:
+    _use_sqlite_registry()
+
     response = test_client.get("/health")
+
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
     assert body["docs_indexed"] > 0
+    assert body["database"] == "ok"
 
 
 def test_ask_happy_path_returns_a_full_answer(test_client) -> None:

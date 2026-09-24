@@ -35,6 +35,7 @@ class AskResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     docs_indexed: int
+    database: str
 
 
 class IngestResponse(BaseModel):

@@ -1,7 +1,7 @@
 """SQLAlchemy engine/session setup for the Loopline sample app.
 
 Defaults to a local SQLite file so the course works with zero external services.
-Point LOOPLINE_DATABASE_URL at a MySQL instance from Episode 15 onward.
+Point LOOPLINE_DATABASE_URL at a MySQL instance from Episode 16 onward.
 """
 from __future__ import annotations
 

@@ -1,0 +1,38 @@
+# MySQL for query_database (Episode 16) - matching Loopline's real target database,
+# instead of the SQLite stand-in this whole course has used until now. Only MySQL is
+# containerized; the copilot API keeps running natively (`uvicorn ...`, as every
+# episode since 14 already does) - this is infrastructure this project depends on,
+# not the whole application.
+#
+# Secrets: MYSQL_ROOT_PASSWORD and MYSQL_READER_PASSWORD come from a local .env file
+# (see .env.example) - never hardcoded here, never committed.
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env first}
+      MYSQL_DATABASE: loopline
+      MYSQL_READER_PASSWORD: ${MYSQL_READER_PASSWORD:?set MYSQL_READER_PASSWORD in .env first}
+    ports:
+      - "3306:3306"
+    volumes:
+      - loopline_mysql_data:/var/lib/mysql
+      # docker-entrypoint-initdb.d scripts run once, in filename order, only against
+      # a brand-new (empty) data volume - this course's one-and-only "migration":
+      # schema.sql creates the tables, seed_data.sql loads the same fixture rows
+      # every SQLite run already uses, mysql-readonly-user.sh provisions
+      # query_database's read-only user. A second schema *change* later would need
+      # a real migration tool (Alembic, Flyway); one schema version doesn't.
+      - ./sample_app/loopline/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./sample_app/loopline/seed_data.sql:/docker-entrypoint-initdb.d/02-seed-data.sql:ro
+      - ./sample_app/loopline/mysql-readonly-user.sh:/docker-entrypoint-initdb.d/03-readonly-user.sh:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  loopline_mysql_data:
