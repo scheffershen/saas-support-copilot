@@ -76,13 +76,20 @@ def test_search_semantic_returns_nothing_for_a_genuinely_unrelated_query() -> No
     # reorder the whole corpus, never actually find nothing. A pure made-up token
     # shares no vocabulary with any real doc, so it must score 0.0 everywhere and the
     # min_similarity floor must exclude it.
+    #
+    # The token itself needs to be re-verified, not just guessed, against whatever
+    # docs currently exist: Episode 13's docs/integration-notes.md happened to
+    # hash-collide with this test's original nonsense string
+    # ("zzqvxlpfmnbwortkugh"), producing a nonzero similarity by accident - the exact
+    # class of hashing-trick fragility this lesson's own failure case already names,
+    # just triggered by a later doc addition instead of a real query.
     index = DocumentIndex(_load_docs(), HashingEmbeddingClient())
-    assert index.search_semantic("zzqvxlpfmnbwortkugh") == []
+    assert index.search_semantic("qxjzvbfwmnpokrlghti") == []
 
 
 def test_search_hybrid_returns_nothing_when_both_methods_find_nothing() -> None:
     index = DocumentIndex(_load_docs(), HashingEmbeddingClient())
-    assert index.search_hybrid("zzqvxlpfmnbwortkugh") == []
+    assert index.search_hybrid("qxjzvbfwmnpokrlghti") == []
 
 
 def _eligible_for(index: DocumentIndex, role: str | None) -> set[int]:

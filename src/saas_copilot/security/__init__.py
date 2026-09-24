@@ -1,5 +1,7 @@
 from .classification import is_visible_to, roles_allowed
+from .injection import DATA_HEADER, scan_for_injection_markers
 from .intent import CONFIRMATION_MARKER, DestructiveIntentMatch, build_refusal_answer, detect_destructive_intent
+from .redaction import REDACTED, redact_answer, redact_secrets
 from .roles import ROLES, UnknownRoleError, validate_role
 
 __all__ = [
@@ -12,4 +14,9 @@ __all__ = [
     "CONFIRMATION_MARKER",
     "detect_destructive_intent",
     "build_refusal_answer",
+    "DATA_HEADER",
+    "scan_for_injection_markers",
+    "REDACTED",
+    "redact_secrets",
+    "redact_answer",
 ]
