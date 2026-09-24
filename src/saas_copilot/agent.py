@@ -1,54 +1,54 @@
 """The agent loop: observe -> decide -> act -> observe.
 
-route the question to a specialist, then let the model choose between calling a tool
+Route the question to a specialist, then let the model choose between calling a tool
 (to gather evidence) or giving a final answer, one step at a time, until it answers,
 gets cancelled, or runs out of steps. This module knows nothing about sessions or
 storage - `history` is just prior messages a caller hands in. memory/orchestration.py
 is what turns that into cross-turn conversation state.
+
+Since Episode 11, this is only the *reactive* strategy - used for usage/bug/general.
+A `feature` question gets planning/feasibility.py's plan-first workflow instead,
+dispatched below once routing is known. Two different strategies, one shared result
+type and error hierarchy (agent_types.py), one public entry point (run_agent).
 """
 from __future__ import annotations
 
 import json
 import threading
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from pydantic import BaseModel, model_validator
 
+from .agent_types import (
+    AgentCancelledError,
+    AgentError,
+    AgentRunResult,
+    MaxStepsExceededError,
+    MissingEvidenceError,
+    RepeatedToolCallError,
+)
 from .answer import Answer
 from .llm.base import LLMClient, Message
-from .models import Document, SourceFile
 from .prompts import ANSWER_SYSTEM_PROMPT
 from .router import classify
 from .specialists import Specialist, get_specialist
 from .structured import complete_structured
 from .tools.base import ToolError
+from .tools.formatting import format_tool_result
 from .tools.registry import ToolRegistry
-from .tools.source import CodeMatch
 
-
-class AgentError(Exception):
-    """Base class for agent-loop failures - distinct from an LLM failure
-    (llm.base.LLMError) or a single tool failure (tools.base.ToolError)."""
-
-
-class MaxStepsExceededError(AgentError):
-    """The loop ran max_steps times without the specialist giving a final answer."""
-
-
-class RepeatedToolCallError(AgentError):
-    """The same tool was called with the exact same arguments twice in one run - a
-    sign the model is stuck, not making progress."""
-
-
-class MissingEvidenceError(AgentError):
-    """A specialist with required_evidence_tools tried to answer without a single
-    successful call to one of them."""
-
-
-class AgentCancelledError(AgentError):
-    """cancel_token was set before the loop could produce a final answer."""
+__all__ = [
+    "AgentError",
+    "MaxStepsExceededError",
+    "RepeatedToolCallError",
+    "MissingEvidenceError",
+    "AgentCancelledError",
+    "AgentRunResult",
+    "ToolCall",
+    "AgentStep",
+    "run_agent",
+]
 
 
 class ToolCall(BaseModel):
@@ -96,14 +96,6 @@ The Answer object, when you give one:
 """
 
 
-@dataclass(frozen=True)
-class AgentRunResult:
-    answer: Answer
-    domain: str
-    steps_taken: int
-    tools_called: tuple[str, ...]
-
-
 def run_agent(
     client: LLMClient,
     registry: ToolRegistry,
@@ -118,6 +110,32 @@ def run_agent(
 
     decision = classify(client, question, history=history)
     specialist = get_specialist(decision.domain)
+
+    if decision.domain == "feature":
+        # Local import: planning/feasibility.py imports AgentRunResult and the
+        # AgentError hierarchy from agent_types.py, not from this module - but it
+        # still needs run_agent's own dispatch to reach it, and importing it at
+        # module level here would make agent.py depend on planning at import time
+        # for every caller, even ones that never ask a feature question.
+        from .planning.feasibility import assess_feasibility
+
+        return assess_feasibility(client, registry, question, specialist=specialist, history=history)
+
+    return _run_reactive_loop(
+        client, registry, question, specialist=specialist, history=history, max_steps=max_steps, cancel_token=cancel_token
+    )
+
+
+def _run_reactive_loop(
+    client: LLMClient,
+    registry: ToolRegistry,
+    question: str,
+    *,
+    specialist: Specialist,
+    history: Sequence[Message],
+    max_steps: int,
+    cancel_token: threading.Event | None,
+) -> AgentRunResult:
     messages = _initial_messages(specialist, registry, question, history=history)
 
     evidence_tools_called: set[str] = set()
@@ -155,7 +173,7 @@ def run_agent(
             result = registry.call(call.tool, call.arguments)
             evidence_tools_called.add(call.tool)
             all_tools_called.append(call.tool)
-            observation = f"Tool result: {_format_result(result)}"
+            observation = f"Tool result: {format_tool_result(result)}"
         except ToolError as exc:
             observation = f"Tool error: {exc}"
 
@@ -167,34 +185,9 @@ def run_agent(
 def _initial_messages(
     specialist: Specialist, registry: ToolRegistry, question: str, *, history: Sequence[Message] = ()
 ) -> list[Message]:
-    tool_menu_lines = ["Available tools:"]
-    for spec in registry.specs():
-        arg_names = ", ".join(spec.args_schema.model_fields)
-        tool_menu_lines.append(f"- {spec.name}({arg_names}): {spec.description}")
-
     system = "\n\n".join([
         ANSWER_SYSTEM_PROMPT,
         specialist.prompt_fragment,
-        AGENT_STEP_INSTRUCTIONS.format(tool_menu="\n".join(tool_menu_lines)),
+        AGENT_STEP_INSTRUCTIONS.format(tool_menu=registry.describe()),
     ])
     return [Message(role="system", content=system), *history, Message(role="user", content=question)]
-
-
-def _format_result(result: Any) -> str:
-    if isinstance(result, list):
-        if not result:
-            return "(no results)"
-        return "\n".join(_format_item(item) for item in result[:20])
-    return _format_item(result)
-
-
-def _format_item(item: Any) -> str:
-    if isinstance(item, Document):
-        return f"[{item.citation}] {item.title}\n{item.content[:500]}"
-    if isinstance(item, SourceFile):
-        return f"[{item.path}]\n{item.content}"
-    if isinstance(item, CodeMatch):
-        return f"[{item.path}:{item.line}] {item.text}"
-    if isinstance(item, dict):
-        return json.dumps(item, ensure_ascii=False)
-    return str(item)

@@ -53,6 +53,25 @@ def _final_answer(domain: str, citations: list[str]) -> str:
     })
 
 
+def _plan(steps: list[dict]) -> str:
+    return json.dumps({"steps": steps})
+
+
+def _answer_json(domain: str, citations: list[str], confidence: float = 0.6) -> str:
+    return json.dumps({
+        "domain": domain,
+        "answer": "This is the answer.",
+        "citations": citations,
+        "confidence": confidence,
+        "refused": False,
+        "refusal_reason": None,
+    })
+
+
+def _evaluation(acceptable: bool, feedback: str = "") -> str:
+    return json.dumps({"acceptable": acceptable, "feedback": feedback})
+
+
 def test_bug_specialist_gathers_evidence_then_answers() -> None:
     client = FakeLLMClient(responses=[
         _route("bug"),
@@ -68,15 +87,24 @@ def test_bug_specialist_gathers_evidence_then_answers() -> None:
     assert result.tools_called == ("search_code",)
 
 
-def test_feature_specialist_can_satisfy_evidence_via_query_graph() -> None:
-    # The Episode 9 promise made good: a blast-radius check via the real call graph
-    # counts as evidence for a feature-feasibility answer, exercised through the full
-    # loop (route -> call query_graph for real against Loopline -> answer), not just
-    # asserted as a static property of the Specialist.
+def test_run_agent_dispatches_feature_questions_to_the_planning_workflow() -> None:
+    # Since Episode 11, "feature" no longer goes through this reactive loop at all -
+    # run_agent classifies, then hands off to planning.feasibility.assess_feasibility.
+    # This test proves the dispatch itself works end to end (route -> plan -> execute
+    # the real query_graph against Loopline -> synthesize -> evaluate); the workflow's
+    # own internals (plan ordering, evidence gating, revision) are covered in depth by
+    # tests/unit/test_planning_feasibility.py.
     client = FakeLLMClient(responses=[
         _route("feature"),
-        _call_tool("query_graph", symbol="services.assign_ticket", direction="callers"),
-        _final_answer("feature", ["app/services.py"]),
+        _plan([{
+            "step_id": "callers",
+            "tool": "query_graph",
+            "arguments": {"symbol": "services.assign_ticket", "direction": "callers"},
+            "depends_on": [],
+            "rationale": "check what depends on assign_ticket before calling this isolated",
+        }]),
+        _answer_json("feature", ["app/services.py"]),
+        _evaluation(True),
     ])
 
     result = run_agent(client, _registry(), "could we let anyone self-assign a ticket?")

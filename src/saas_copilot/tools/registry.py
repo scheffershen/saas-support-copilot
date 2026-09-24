@@ -50,6 +50,18 @@ class ToolRegistry:
         """
         return [self._tools[name] for name in self.names()]
 
+    def describe(self) -> str:
+        """A human/LLM-readable tool menu, generated from what's actually
+        registered. Shared by agent.py's reactive loop and planning/feasibility.py's
+        plan generation (Episode 11) - both need the same menu, and neither should
+        maintain its own copy that could drift from the other or from reality.
+        """
+        lines = ["Available tools:"]
+        for spec in self.specs():
+            arg_names = ", ".join(spec.args_schema.model_fields)
+            lines.append(f"- {spec.name}({arg_names}): {spec.description}")
+        return "\n".join(lines)
+
     def call(self, name: str, raw_args: dict[str, Any]) -> Any:
         """Validate `raw_args` against the tool's schema, then run it under a timeout.
 
