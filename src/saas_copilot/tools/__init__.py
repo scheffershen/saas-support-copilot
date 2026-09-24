@@ -15,10 +15,12 @@ from ..retrieval.embeddings import EmbeddingClient
 from ..retrieval.hashing_embeddings import HashingEmbeddingClient
 from ..retrieval.index import DocumentIndex
 from ..security.roles import validate_role
+from .database import QueryDatabaseArgs, query_database, resolve_sqlite_path
 from .docs import SearchDocsArgs, load_docs, search_docs
 from .files import ListFilesArgs, list_files
 from .git_history import GitLogArgs, GitShowArgs, git_log, git_show
 from .graph import QueryGraphArgs, query_graph
+from .logs import ReadLogsArgs, read_logs
 from .registry import ToolRegistry, ToolSpec
 from .source import ReadSourceArgs, SearchCodeArgs, read_source, search_code
 
@@ -45,12 +47,16 @@ def build_default_registry(
 
     docs_root = (repo_root / settings.loopline_docs_root).resolve()
     source_root = (repo_root / settings.loopline_source_root).resolve()
+    logs_root = (repo_root / settings.loopline_logs_root).resolve()
     loopline_scope = source_root.parent  # sample_app/loopline - covers app/, docs/, schema.sql, logs/
 
     # Built once per registry, not per query - the same reason the tool's allowlisted
     # root is bound at registration time rather than re-resolved on every call.
     docs_index = DocumentIndex(load_docs(docs_root), embedder or HashingEmbeddingClient())
     call_graph = CallGraph(source_root)
+
+    db_path = resolve_sqlite_path(settings.loopline_database_url, repo_root=repo_root)
+    _ensure_loopline_db_seeded()
 
     registry = ToolRegistry()
 
@@ -96,5 +102,31 @@ def build_default_registry(
         args_schema=QueryGraphArgs,
         handler=partial(query_graph, graph=call_graph),
     ))
+    registry.register(ToolSpec(
+        name="read_logs",
+        description="Tail Loopline's application log, optionally filtered by a regex.",
+        args_schema=ReadLogsArgs,
+        handler=partial(read_logs, log_path=logs_root / "app.log"),
+    ))
+    registry.register(ToolSpec(
+        name="query_database",
+        description="Run one read-only SELECT against Loopline's database.",
+        args_schema=QueryDatabaseArgs,
+        handler=partial(query_database, db_path=db_path),
+    ))
 
     return registry
+
+
+def _ensure_loopline_db_seeded() -> None:
+    """query_database is the first tool that touches Loopline's actual database -
+    every other tool only ever reads files. seed() is already idempotent (it skips
+    itself once rows exist), so calling it here removes the README's manual seeding
+    step as a hidden prerequisite for a clean test run, instead of leaving it silently
+    assumed. Imported locally, not at module level: saas_copilot is the generic
+    copilot side of this course, sample_app is the concrete app under test, and
+    nothing else in this package needs that dependency at import time.
+    """
+    from sample_app.loopline.app.seed import seed
+
+    seed()

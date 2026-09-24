@@ -22,16 +22,36 @@ def _registry(role: str | None = None):
     return build_default_registry(Settings(), repo_root=REPO_ROOT, role=role)
 
 
-def test_default_registry_registers_all_seven_tools() -> None:
+def test_default_registry_registers_all_nine_tools() -> None:
     assert _registry().names() == [
         "git_log",
         "git_show",
         "list_files",
+        "query_database",
         "query_graph",
+        "read_logs",
         "read_source",
         "search_code",
         "search_docs",
     ]
+
+
+def test_read_logs_through_the_registry_finds_the_seeded_bug_traceback() -> None:
+    lines = _registry().call("read_logs", {"tail": 200, "grep": "KeyError"})
+    assert any("KeyError: 5" in line for line in lines)
+
+
+def test_query_database_through_the_registry_confirms_the_missing_settings_row() -> None:
+    # The exact live query that root-causes the seeded notification bug: user 5 was
+    # assigned a ticket but was never given a notification_settings row - see
+    # sample_app/loopline/app/seed.py's comment on NOTIFICATION_SETTINGS.
+    rows = _registry().call("query_database", {"sql": "SELECT * FROM notification_settings WHERE user_id = 5"})
+    assert rows == []
+
+
+def test_query_database_through_the_registry_rejects_a_mutation() -> None:
+    with pytest.raises(ToolError, match="SELECT"):
+        _registry().call("query_database", {"sql": "DELETE FROM users"})
 
 
 def test_query_graph_through_the_registry() -> None:

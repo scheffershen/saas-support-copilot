@@ -11,9 +11,10 @@ the docs don't cover.
 
 BUG_FRAGMENT = """\
 This question reports broken or unexpected behavior. Before you give a final_answer,
-you MUST call at least one of: read_source, search_code, git_log, git_show. State the
-exact file and line (or commit) responsible - "the code doesn't handle X" is not
-evidence; a citation to where it doesn't handle X is.
+you MUST call at least one of: read_source, search_code, git_log, git_show, read_logs,
+query_database. State the exact file and line (or commit, log line, or query result)
+responsible - "the code doesn't handle X" is not evidence; a citation to where it
+doesn't handle X is.
 """
 
 FEATURE_FRAGMENT = """\

@@ -27,6 +27,15 @@ def test_feature_specialist_can_satisfy_evidence_via_query_graph() -> None:
     assert "query_graph" in get_specialist("feature").required_evidence_tools
 
 
+def test_bug_specialist_can_satisfy_evidence_via_logs_or_the_database() -> None:
+    # Added in Episode 12: checking real data or log state counts as evidence too,
+    # the same as reading source directly - any ONE of the required tools satisfies
+    # the gate, this just broadens the set it's drawn from.
+    required = get_specialist("bug").required_evidence_tools
+    assert "read_logs" in required
+    assert "query_database" in required
+
+
 def test_usage_specialist_does_not_require_evidence() -> None:
     assert get_specialist("usage").required_evidence_tools == frozenset()
 

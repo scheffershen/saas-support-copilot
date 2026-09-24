@@ -23,7 +23,9 @@ SPECIALISTS: dict[Domain, Specialist] = {
     "bug": Specialist(
         domain="bug",
         prompt_fragment=BUG_FRAGMENT,
-        required_evidence_tools=frozenset({"read_source", "search_code", "git_log", "git_show"}),
+        required_evidence_tools=frozenset({
+            "read_source", "search_code", "git_log", "git_show", "read_logs", "query_database",
+        }),
     ),
     "feature": Specialist(
         domain="feature",
