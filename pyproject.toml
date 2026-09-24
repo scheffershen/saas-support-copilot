@@ -30,3 +30,8 @@ packages = ["src/saas_copilot"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]
+# Project-local temp dir for pytest's tmp_path fixture, instead of the OS default
+# (%TEMP%/pytest-of-<user> on Windows, which can accumulate stale, permission-locked
+# numbered subdirs across unrelated runs and break tmp_path with no relation to the
+# test itself).
+addopts = "--basetemp=.pytest-tmp"
