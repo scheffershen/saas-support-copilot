@@ -101,9 +101,15 @@ def assess_feasibility(
     synthesis_messages = _synthesis_messages(specialist, question, observation_lines, history=history)
     draft = complete_structured(client, synthesis_messages, Answer)
 
-    for _ in range(max_revisions):
+    # Every revision gets re-checked before shipping, not trusted blindly: attempt
+    # max_revisions is the last one allowed to revise, but it still evaluates its own
+    # output first. A draft that's still rejected after the budget runs out ships
+    # anyway - it already passed the evidence gate above and is a valid Answer, just
+    # not one the evaluator fully approved. Bounded effort, not guaranteed agreement;
+    # stated plainly in the lesson, not hidden.
+    for attempt in range(max_revisions + 1):
         evaluation = complete_structured(client, _evaluator_messages(question, draft), FeasibilityEvaluation)
-        if evaluation.acceptable:
+        if evaluation.acceptable or attempt == max_revisions:
             break
         synthesis_messages = synthesis_messages + [
             Message(role="assistant", content=draft.model_dump_json()),
