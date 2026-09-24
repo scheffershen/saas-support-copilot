@@ -21,15 +21,21 @@ def _registry():
     return build_default_registry(Settings(), repo_root=REPO_ROOT)
 
 
-def test_default_registry_registers_all_six_tools() -> None:
+def test_default_registry_registers_all_seven_tools() -> None:
     assert _registry().names() == [
         "git_log",
         "git_show",
         "list_files",
+        "query_graph",
         "read_source",
         "search_code",
         "search_docs",
     ]
+
+
+def test_query_graph_through_the_registry() -> None:
+    callees = _registry().call("query_graph", {"symbol": "routers.tickets.add_comment"})
+    assert callees == ["notifications.notify_assignee_on_comment"]
 
 
 def test_search_docs_through_the_registry() -> None:

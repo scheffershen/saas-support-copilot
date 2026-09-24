@@ -10,12 +10,14 @@ from functools import partial
 from pathlib import Path
 
 from ..config import Settings
+from ..graph.call_graph import CallGraph
 from ..retrieval.embeddings import EmbeddingClient
 from ..retrieval.hashing_embeddings import HashingEmbeddingClient
 from ..retrieval.index import DocumentIndex
 from .docs import SearchDocsArgs, load_docs, search_docs
 from .files import ListFilesArgs, list_files
 from .git_history import GitLogArgs, GitShowArgs, git_log, git_show
+from .graph import QueryGraphArgs, query_graph
 from .registry import ToolRegistry, ToolSpec
 from .source import ReadSourceArgs, SearchCodeArgs, read_source, search_code
 
@@ -32,6 +34,7 @@ def build_default_registry(
     # Built once, here, not per query - the same reason the tool's allowlisted root
     # is bound at registration time rather than re-resolved on every call.
     docs_index = DocumentIndex(load_docs(docs_root), embedder or HashingEmbeddingClient())
+    call_graph = CallGraph(source_root)
 
     registry = ToolRegistry()
 
@@ -70,6 +73,12 @@ def build_default_registry(
         description="Show one commit's diff, scoped to Loopline.",
         args_schema=GitShowArgs,
         handler=partial(git_show, repo_root=repo_root, scope=loopline_scope),
+    ))
+    registry.register(ToolSpec(
+        name="query_graph",
+        description="Traverse Loopline's call graph: who calls a function, or what it calls.",
+        args_schema=QueryGraphArgs,
+        handler=partial(query_graph, graph=call_graph),
     ))
 
     return registry
