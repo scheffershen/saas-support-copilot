@@ -13,6 +13,15 @@ from .embeddings import EmbeddingClient, cosine_similarity
 from .normalize import normalize_text
 from .rrf import reciprocal_rank_fusion
 
+# Without a floor, cosine similarity ranks *every* chunk, including ones with exactly
+# 0.0 (or near-zero, noisy) similarity - "search" would never mean "find," only
+# "reorder everything." Found the hard way: an unfiltered semantic ranking made a
+# hybrid search return results for a query that matched nothing at all. 0.05 is a
+# permissive floor tuned for this course's intentionally crude hashing embedder; a
+# real trained embedding model's similarities are better calibrated and would use a
+# higher one - see this episode's exercise.
+DEFAULT_MIN_SIMILARITY = 0.05
+
 
 class DocumentIndex:
     def __init__(self, documents: list[Document], embedder: EmbeddingClient) -> None:
@@ -40,21 +49,25 @@ class DocumentIndex:
     def search_bm25(self, query: str, limit: int = 10) -> list[Document]:
         return [self._chunks[sc.index] for sc in self._bm25.search(query, limit=limit)]
 
-    def search_semantic(self, query: str, limit: int = 10) -> list[Document]:
-        ranking = self._semantic_ranking(query)
+    def search_semantic(self, query: str, limit: int = 10, *, min_similarity: float = DEFAULT_MIN_SIMILARITY) -> list[Document]:
+        ranking = self._semantic_ranking(query, min_similarity=min_similarity)
         return [self._chunks[i] for i in ranking[:limit]]
 
-    def search_hybrid(self, query: str, limit: int = 10, *, candidates: int = 20) -> list[Document]:
+    def search_hybrid(
+        self, query: str, limit: int = 10, *, candidates: int = 20, min_similarity: float = DEFAULT_MIN_SIMILARITY
+    ) -> list[Document]:
         bm25_ranking = [sc.index for sc in self._bm25.search(query, limit=candidates)]
-        semantic_ranking = self._semantic_ranking(query)[:candidates]
+        semantic_ranking = self._semantic_ranking(query, min_similarity=min_similarity)[:candidates]
 
         fused = reciprocal_rank_fusion([bm25_ranking, semantic_ranking])
         return [self._chunks[index] for index, _score in fused[:limit]]
 
-    def _semantic_ranking(self, query: str) -> list[int]:
+    def _semantic_ranking(self, query: str, *, min_similarity: float = 0.0) -> list[int]:
         query_vector = self._embedder.embed(query)
-        return sorted(
-            range(len(self._chunks)),
-            key=lambda i: cosine_similarity(query_vector, self._embeddings[i]),
-            reverse=True,
-        )
+        scored = [
+            (i, cosine_similarity(query_vector, embedding))
+            for i, embedding in enumerate(self._embeddings)
+        ]
+        scored = [(i, score) for i, score in scored if score > min_similarity]
+        scored.sort(key=lambda pair: pair[1], reverse=True)
+        return [i for i, _score in scored]

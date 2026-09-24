@@ -10,7 +10,10 @@ from functools import partial
 from pathlib import Path
 
 from ..config import Settings
-from .docs import SearchDocsArgs, search_docs
+from ..retrieval.embeddings import EmbeddingClient
+from ..retrieval.hashing_embeddings import HashingEmbeddingClient
+from ..retrieval.index import DocumentIndex
+from .docs import SearchDocsArgs, load_docs, search_docs
 from .files import ListFilesArgs, list_files
 from .git_history import GitLogArgs, GitShowArgs, git_log, git_show
 from .registry import ToolRegistry, ToolSpec
@@ -19,18 +22,24 @@ from .source import ReadSourceArgs, SearchCodeArgs, read_source, search_code
 __all__ = ["ToolRegistry", "ToolSpec", "build_default_registry"]
 
 
-def build_default_registry(settings: Settings, *, repo_root: Path) -> ToolRegistry:
+def build_default_registry(
+    settings: Settings, *, repo_root: Path, embedder: EmbeddingClient | None = None
+) -> ToolRegistry:
     docs_root = (repo_root / settings.loopline_docs_root).resolve()
     source_root = (repo_root / settings.loopline_source_root).resolve()
     loopline_scope = source_root.parent  # sample_app/loopline - covers app/, docs/, schema.sql, logs/
+
+    # Built once, here, not per query - the same reason the tool's allowlisted root
+    # is bound at registration time rather than re-resolved on every call.
+    docs_index = DocumentIndex(load_docs(docs_root), embedder or HashingEmbeddingClient())
 
     registry = ToolRegistry()
 
     registry.register(ToolSpec(
         name="search_docs",
-        description="Keyword search over Loopline's end-user documentation.",
+        description="BM25 + semantic hybrid search over Loopline's end-user documentation.",
         args_schema=SearchDocsArgs,
-        handler=partial(search_docs, root=docs_root),
+        handler=partial(search_docs, index=docs_index),
     ))
     registry.register(ToolSpec(
         name="read_source",

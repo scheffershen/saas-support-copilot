@@ -69,6 +69,21 @@ def test_search_hybrid_respects_limit() -> None:
     assert len(index.search_hybrid("ticket", limit=2)) == 2
 
 
+def test_search_semantic_returns_nothing_for_a_genuinely_unrelated_query() -> None:
+    # The bug this test exists to catch: an unfiltered semantic ranking sorts *every*
+    # chunk by similarity, including chunks at exactly 0.0 - "search" would only ever
+    # reorder the whole corpus, never actually find nothing. A pure made-up token
+    # shares no vocabulary with any real doc, so it must score 0.0 everywhere and the
+    # min_similarity floor must exclude it.
+    index = DocumentIndex(_load_docs(), HashingEmbeddingClient())
+    assert index.search_semantic("zzqvxlpfmnbwortkugh") == []
+
+
+def test_search_hybrid_returns_nothing_when_both_methods_find_nothing() -> None:
+    index = DocumentIndex(_load_docs(), HashingEmbeddingClient())
+    assert index.search_hybrid("zzqvxlpfmnbwortkugh") == []
+
+
 def test_document_index_is_generic_over_source_files_too() -> None:
     # Proves the pipeline built for docs is genuinely reusable for source, per this
     # episode's "index Loopline's docs AND source" goal - not a claim search_code
