@@ -1,16 +1,20 @@
-"""Parsing and validating raw LLM text into a typed Answer, with a bounded retry loop
-for malformed output. This is the pattern Episode 4's router and Episode 6's agent
-loop both reuse: call the model, validate, and on failure hand the model its own
-mistake back instead of crashing or silently guessing.
+"""Parsing and validating raw LLM text into a typed Pydantic model, with a bounded
+retry loop for malformed output.
+
+Generalized in Episode 4: this was Answer-only in Episode 3, until the router needed
+the exact same shape for RouteDecision. Two real call sites is when generalizing pays
+for itself - one call site would have been speculative.
 """
 from __future__ import annotations
 
 import json
+from typing import TypeVar
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
-from .answer import Answer
 from .llm.base import LLMClient, Message
+
+SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 
 class MalformedOutputError(Exception):
@@ -22,26 +26,27 @@ class MalformedOutputError(Exception):
     """
 
 
-def parse_answer(raw: str) -> Answer:
-    """Parse one raw LLM response into a validated Answer."""
+def parse_structured(raw: str, schema: type[SchemaT]) -> SchemaT:
+    """Parse one raw LLM response into a validated instance of `schema`."""
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise MalformedOutputError(f"not valid JSON: {exc}") from exc
 
     try:
-        return Answer.model_validate(data)
+        return schema.model_validate(data)
     except ValidationError as exc:
-        raise MalformedOutputError(f"JSON did not match the Answer schema: {exc}") from exc
+        raise MalformedOutputError(f"JSON did not match the {schema.__name__} schema: {exc}") from exc
 
 
 def complete_structured(
     client: LLMClient,
     messages: list[Message],
+    schema: type[SchemaT],
     *,
     max_attempts: int = 3,
-) -> Answer:
-    """Call the LLM and parse its output as an Answer, retrying on malformed output.
+) -> SchemaT:
+    """Call the LLM and parse its output as `schema`, retrying on malformed output.
 
     On a parse/validation failure, the exact error is appended to the conversation as
     the model's own prior turn plus a correction request, and it gets another attempt.
@@ -52,7 +57,7 @@ def complete_structured(
     for _ in range(max_attempts):
         response = client.complete(attempt_messages)
         try:
-            return parse_answer(response.content)
+            return parse_structured(response.content, schema)
         except MalformedOutputError as exc:
             last_error = exc
             attempt_messages = attempt_messages + [
@@ -61,9 +66,9 @@ def complete_structured(
                     role="user",
                     content=(
                         f"That response was not valid: {exc}. "
-                        "Reply again with ONLY valid JSON matching the Answer schema."
+                        f"Reply again with ONLY valid JSON matching the {schema.__name__} schema."
                     ),
                 ),
             ]
 
-    raise MalformedOutputError(f"no valid Answer after {max_attempts} attempts: {last_error}")
+    raise MalformedOutputError(f"no valid {schema.__name__} after {max_attempts} attempts: {last_error}")
