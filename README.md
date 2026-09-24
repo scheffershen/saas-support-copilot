@@ -7,7 +7,8 @@ for a YouTube course: every episode is one focused, tested change, and the commi
 history *is* the course.
 
 > Learning prototype, not a production-security guarantee. See [`lessons/`](lessons/)
-> for the full arc and Episode 17 for the prototype-vs-production gap list.
+> for the full arc and the [production-readiness checklist](docs/production-readiness-checklist.md)
+> (Episode 17) for exactly what's still missing.
 
 ## What's fictional here
 
@@ -84,6 +85,7 @@ saas-support-copilot/
 ├── docker-compose.yml     # optional MySQL, for query_database (Episode 16)
 ├── .env.example
 ├── README.md
+├── docs/                  # production-readiness checklist (Episode 17)
 ├── src/saas_copilot/      # the copilot — built episode by episode
 │   └── mcp_server/        # standalone MCP server for query_database (Episode 16)
 ├── sample_app/loopline/   # the fictional target SaaS app (docs, source, schema, logs)
