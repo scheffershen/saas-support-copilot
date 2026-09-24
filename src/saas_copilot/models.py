@@ -20,8 +20,15 @@ class Document:
 
     @property
     def citation(self) -> str:
-        """A `[Source: ...]`-ready reference, e.g. "docs/notifications.md#chunk-2"."""
-        return f"{self.path}#chunk-{self.chunk_id}" if self.chunk_id else self.path
+        """A `[Source: ...]`-ready reference, e.g. "docs/notifications.md#chunk-2".
+
+        Always includes the chunk suffix, even for chunk_id=0 (changed in Episode 8):
+        once real chunking exists, chunk 0 is a genuine first chunk of a possibly
+        multi-chunk document, not a sentinel for "this document wasn't chunked" -
+        omitting the suffix there would make a citation to just the first third of a
+        long document indistinguishable from a citation to the whole thing.
+        """
+        return f"{self.path}#chunk-{self.chunk_id}"
 
 
 @dataclass(frozen=True)

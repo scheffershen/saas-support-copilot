@@ -8,9 +8,11 @@ def test_document_citation_with_chunk_id() -> None:
     assert doc.citation == "docs/notifications.md#chunk-2"
 
 
-def test_document_citation_without_chunk_id() -> None:
+def test_document_citation_with_default_chunk_id() -> None:
+    # chunk_id defaults to 0. Since Episode 8, that's a real first chunk, not a
+    # sentinel meaning "not chunked" - the citation always includes it.
     doc = Document(path="docs/notifications.md", title="Notifications", content="...")
-    assert doc.citation == "docs/notifications.md"
+    assert doc.citation == "docs/notifications.md#chunk-0"
 
 
 def test_document_is_immutable() -> None:
