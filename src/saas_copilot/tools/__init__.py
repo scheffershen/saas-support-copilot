@@ -11,12 +11,19 @@ build_shared_resources() (build the expensive stuff once, e.g. at API startup) a
 build_registry_for_role() (cheap - just registers tools against already-built
 resources, rebinding only role). build_default_registry() is now a thin wrapper over
 both, kept so every earlier episode's tests keep calling it exactly as before.
+
+Since Episode 16: query_database itself has three possible backends (SQLite
+in-process, MySQL in-process, MySQL via a standalone MCP server) - which one gets
+registered is decided once, here, from Settings, never something a tool argument
+could pick.
 """
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
+from typing import Callable
 
 from ..config import Settings
 from ..graph.call_graph import CallGraph
@@ -25,12 +32,14 @@ from ..retrieval.hashing_embeddings import HashingEmbeddingClient
 from ..retrieval.index import DocumentIndex
 from ..security.roles import validate_role
 from .database import QueryDatabaseArgs, query_database, resolve_sqlite_path
+from .database_mcp import MCP_TIMEOUT_SECONDS, query_database_via_mcp
+from .database_mysql import query_database_mysql
 from .docs import SearchDocsArgs, load_docs, search_docs
 from .files import ListFilesArgs, list_files
 from .git_history import GitLogArgs, GitShowArgs, git_log, git_show
 from .graph import QueryGraphArgs, query_graph
 from .logs import ReadLogsArgs, read_logs
-from .registry import ToolRegistry, ToolSpec
+from .registry import DEFAULT_TIMEOUT_SECONDS, ToolRegistry, ToolSpec
 from .source import ReadSourceArgs, SearchCodeArgs, read_source, search_code
 
 __all__ = [
@@ -57,7 +66,9 @@ class SharedResources:
     source_root: Path
     logs_root: Path
     loopline_scope: Path
-    db_path: Path
+    db_path: Path | None  # SQLite path - set only when readonly_database_url is empty
+    readonly_database_url: str  # "" means "use SQLite (db_path)"; else mysql+pymysql://...
+    use_database_mcp: bool
 
 
 def build_shared_resources(
@@ -71,8 +82,15 @@ def build_shared_resources(
     docs_index = DocumentIndex(load_docs(docs_root), embedder or HashingEmbeddingClient())
     call_graph = CallGraph(source_root)
 
-    db_path = resolve_sqlite_path(settings.loopline_database_url, repo_root=repo_root)
-    _ensure_loopline_db_seeded()
+    # query_database's own connection (Settings.loopline_readonly_database_url) is
+    # deliberately separate from loopline_database_url above, which is Loopline the
+    # APP's own read-write database - only the SQLite path needs anything resolved
+    # or seeded here; the MySQL paths (database_mysql.py / database_mcp.py) connect
+    # straight from the URL string at call time, no local file to prepare.
+    db_path: Path | None = None
+    if not settings.loopline_readonly_database_url:
+        db_path = resolve_sqlite_path(settings.loopline_database_url, repo_root=repo_root)
+        _ensure_loopline_db_seeded()
 
     return SharedResources(
         docs_index=docs_index,
@@ -82,6 +100,8 @@ def build_shared_resources(
         logs_root=logs_root,
         loopline_scope=loopline_scope,
         db_path=db_path,
+        readonly_database_url=settings.loopline_readonly_database_url,
+        use_database_mcp=settings.use_database_mcp,
     )
 
 
@@ -147,10 +167,32 @@ def build_registry_for_role(resources: SharedResources, *, role: str | None = No
         name="query_database",
         description="Run one read-only SELECT against Loopline's database.",
         args_schema=QueryDatabaseArgs,
-        handler=partial(query_database, db_path=resources.db_path),
+        handler=_query_database_handler(resources),
+        timeout=_query_database_timeout(resources),
     ))
 
     return registry
+
+
+def _query_database_handler(resources: SharedResources) -> Callable[..., list[dict]]:
+    if not resources.readonly_database_url:
+        return partial(query_database, db_path=resources.db_path)
+    if resources.use_database_mcp:
+        return partial(
+            query_database_via_mcp,
+            database_url=resources.readonly_database_url,
+            server_command=[sys.executable, "-m", "saas_copilot.mcp_server.server"],
+        )
+    return partial(query_database_mysql, database_url=resources.readonly_database_url)
+
+
+def _query_database_timeout(resources: SharedResources) -> float:
+    # The MCP path spawns a whole process and does an MCP handshake per call -
+    # real, measurable overhead an in-process call never pays (see
+    # database_mcp.py's own docstring).
+    if resources.readonly_database_url and resources.use_database_mcp:
+        return MCP_TIMEOUT_SECONDS
+    return DEFAULT_TIMEOUT_SECONDS
 
 
 def build_default_registry(

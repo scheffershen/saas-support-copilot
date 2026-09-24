@@ -1,4 +1,8 @@
-"""query_database: read-only SQL against Loopline's own database.
+"""query_database: read-only SQL against Loopline's own database - the SQLite
+backend, used whenever Settings.loopline_readonly_database_url is unset (still the
+default; see tools/database_mysql.py and tools/database_mcp.py for the MySQL
+backends Episode 16 adds alongside this one, and tools/__init__.py for how a registry
+picks between all three).
 
 Read-only isn't enforced by scanning the SQL text for scary keywords - a determined
 enough query can dress a mutation up past a keyword denylist (a WITH-based DML CTE,
@@ -8,8 +12,9 @@ still fails at the database layer - "attempt to write a readonly database" - bec
 the connection physically cannot write, not because this code noticed the attempt.
 Same "enforce it where it can't be argued around" principle as resolve_within_root
 (Episode 5) and eligible_indices (Episode 10), applied to a query string instead of a
-path or a role. The SELECT-only prefix check stays anyway - not the real boundary, but
-a fast, clear error for the common case instead of a raw driver exception.
+path or a role. The SELECT-only prefix check (sql_safety.py, shared with every other
+backend) stays anyway - not the real boundary, but a fast, clear error for the common
+case instead of a raw driver exception.
 
 Raw sqlite3, not the SQLAlchemy engine sample_app/loopline/app/database.py uses: this
 tool runs caller-supplied SQL *text* directly, not ORM-mapped object queries, and
@@ -22,7 +27,6 @@ later pass alone.
 """
 from __future__ import annotations
 
-import re
 import sqlite3
 from pathlib import Path
 
@@ -30,10 +34,7 @@ from pydantic import BaseModel, Field
 
 from ..security.redaction import redact_secrets
 from .base import ToolError
-
-MAX_ROWS = 100
-_SELECT_ONLY = re.compile(r"^\s*select\b", re.IGNORECASE)
-_CHAINED_STATEMENT = re.compile(r";\s*\S")  # a ';' followed by more than trailing whitespace
+from .sql_safety import MAX_ROWS, validate_select_only
 
 
 class QueryDatabaseArgs(BaseModel):
@@ -42,10 +43,7 @@ class QueryDatabaseArgs(BaseModel):
 
 
 def query_database(sql: str, limit: int = 20, *, db_path: Path) -> list[dict]:
-    if not _SELECT_ONLY.match(sql):
-        raise ToolError("query_database only allows SELECT statements")
-    if _CHAINED_STATEMENT.search(sql):
-        raise ToolError("query_database allows exactly one statement - no ';'-separated follow-up")
+    validate_select_only(sql)
 
     uri = f"file:{db_path.resolve().as_posix()}?mode=ro"
     try:
@@ -69,15 +67,12 @@ def _redact_row(row: dict) -> dict:
 
 
 def resolve_sqlite_path(database_url: str, *, repo_root: Path) -> Path:
-    """Turn Settings.loopline_database_url into a real filesystem path.
-
-    Only sqlite:/// is supported here - Episode 16 is where this grows a MySQL/MCP
-    path instead; a clear error now beats a confusing one later.
+    """Turn a sqlite:/// URL into a real filesystem path. Only ever called for the
+    SQLite backend (Settings.loopline_readonly_database_url unset) - a mysql+pymysql://
+    URL is handled entirely differently (database_mysql.py / database_mcp.py), never
+    routed through this function at all.
     """
     prefix = "sqlite:///"
     if not database_url.startswith(prefix):
-        raise ValueError(
-            f"query_database only supports a local sqlite:/// URL for now, got "
-            f"{database_url!r} - MySQL support arrives in Episode 16."
-        )
+        raise ValueError(f"resolve_sqlite_path only supports a local sqlite:/// URL, got {database_url!r}")
     return (repo_root / database_url[len(prefix):]).resolve()

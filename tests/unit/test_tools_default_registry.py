@@ -22,6 +22,16 @@ def _registry(role: str | None = None):
     return build_default_registry(Settings(), repo_root=REPO_ROOT, role=role)
 
 
+def _sqlite_registry(role: str | None = None):
+    # Forces the SQLite query_database backend regardless of whatever
+    # LOOPLINE_READONLY_DATABASE_URL the ambient environment (a developer's own .env,
+    # set up for Episode 16's MySQL tests) happens to have - a test asserting SQLite-
+    # specific behavior must not depend on that variable being unset to pass.
+    return build_default_registry(
+        Settings(loopline_readonly_database_url=""), repo_root=REPO_ROOT, role=role
+    )
+
+
 def test_default_registry_registers_all_nine_tools() -> None:
     assert _registry().names() == [
         "git_log",
@@ -45,13 +55,13 @@ def test_query_database_through_the_registry_confirms_the_missing_settings_row()
     # The exact live query that root-causes the seeded notification bug: user 5 was
     # assigned a ticket but was never given a notification_settings row - see
     # sample_app/loopline/app/seed.py's comment on NOTIFICATION_SETTINGS.
-    rows = _registry().call("query_database", {"sql": "SELECT * FROM notification_settings WHERE user_id = 5"})
+    rows = _sqlite_registry().call("query_database", {"sql": "SELECT * FROM notification_settings WHERE user_id = 5"})
     assert rows == []
 
 
 def test_query_database_through_the_registry_rejects_a_mutation() -> None:
     with pytest.raises(ToolError, match="SELECT"):
-        _registry().call("query_database", {"sql": "DELETE FROM users"})
+        _sqlite_registry().call("query_database", {"sql": "DELETE FROM users"})
 
 
 def test_query_graph_through_the_registry() -> None:
@@ -165,3 +175,19 @@ def test_build_registry_for_role_still_rejects_an_unknown_role() -> None:
     resources = build_shared_resources(Settings(), repo_root=REPO_ROOT)
     with pytest.raises(UnknownRoleError):
         build_registry_for_role(resources, role="superadmin")
+
+
+def test_query_database_dispatches_to_mysql_through_the_full_registry_when_configured() -> None:
+    # Episode 16: the registry doesn't just trust Settings.loopline_readonly_database_url
+    # to be right - it builds a working query_database handler from it. Skipped under
+    # the same condition as tests/unit/test_tools_database_mysql.py (same reason: no
+    # MySQL, nothing to dispatch to).
+    settings = Settings()
+    if not settings.loopline_readonly_database_url:
+        pytest.skip("LOOPLINE_READONLY_DATABASE_URL not set - `docker compose up -d` and set it in .env")
+
+    resources = build_shared_resources(settings, repo_root=REPO_ROOT)
+    registry = build_registry_for_role(resources, role=None)
+
+    rows = registry.call("query_database", {"sql": "SELECT id, name FROM users ORDER BY id LIMIT 1"})
+    assert rows == [{"id": 1, "name": "Amara Diallo"}]

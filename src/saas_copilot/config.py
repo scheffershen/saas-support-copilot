@@ -17,5 +17,14 @@ class Settings(BaseSettings):
     loopline_docs_root: str = "./sample_app/loopline/docs"
     loopline_logs_root: str = "./sample_app/loopline/logs"
 
+    # query_database's connection, kept deliberately separate from
+    # loopline_database_url above: that URL is the APP's own (read-write) database,
+    # this one is what the copilot's read-only tool uses. Empty (the default) means
+    # "use the SQLite path" (tools/database.py), unchanged since Episode 12. Set to a
+    # mysql+pymysql:// URL (Episode 16) to switch query_database to MySQL - directly
+    # in-process, or via a standalone MCP server if use_database_mcp is also true.
+    loopline_readonly_database_url: str = ""
+    use_database_mcp: bool = False
+
 
 settings = Settings()
