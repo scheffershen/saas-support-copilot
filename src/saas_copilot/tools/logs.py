@@ -4,6 +4,11 @@ No path argument, deliberately - unlike read_source/search_code, this tool alway
 reads the one log file its root is bound to at registry-build time (functools.partial,
 same discipline as every allowlisted root since Episode 5). There is no argument here
 for an LLM-chosen value to redirect elsewhere.
+
+Since Episode 13: a log is exactly the kind of place a real secret accidentally ends
+up (a pasted token in a retry error, say), so every returned line is redacted here, at
+the source - not left for format_tool_result()'s later pass to be the only thing
+standing between a leaked credential and the model's context.
 """
 from __future__ import annotations
 
@@ -12,6 +17,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
 
+from ..security.redaction import redact_secrets
 from .base import ToolError
 
 MAX_TAIL_LINES = 200
@@ -39,9 +45,12 @@ def read_logs(tail: int = 20, grep: str | None = None, *, log_path: Path) -> lis
 
     lines = log_path.read_text(encoding="utf-8").splitlines()
     if grep is not None:
+        # Matched against the raw line, before redaction - grepping for "api_key"
+        # must still find the line even though its value won't survive into the
+        # returned text.
         pattern = re.compile(grep, re.IGNORECASE)
         lines = [line for line in lines if pattern.search(line)]
     if not lines:
         raise ToolError(f"no log lines matched: {grep!r}" if grep else "log file is empty")
 
-    return lines[-tail:]
+    return [redact_secrets(line) for line in lines[-tail:]]

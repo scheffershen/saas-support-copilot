@@ -116,3 +116,21 @@ def test_registry_path_guard_still_holds_end_to_end() -> None:
     absolute_elsewhere = str(Path(__file__).resolve())
     with pytest.raises(ToolError, match="absolute path"):
         _registry().call("read_source", {"path": absolute_elsewhere})
+
+
+def test_search_docs_returns_the_seeded_injection_fixture_intact() -> None:
+    # Episode 13's malicious-doc fixture: docs/integration-notes.md, unrestricted so
+    # every role can retrieve it. The embedded instruction isn't stripped or
+    # sanitized at this layer - the tool's job is to faithfully return what's
+    # actually in the document. Treating it as data, not a command, is
+    # format_tool_result()'s job one layer up (test_tools_formatting.py).
+    results = _registry().call("search_docs", {"query": "webhook retry duplicate ticket comment"})
+    assert any("ignore all previous instructions" in doc.content.lower() for doc in results)
+
+
+def test_an_injected_request_to_call_an_unregistered_tool_is_rejected_by_the_allowlist() -> None:
+    # Whatever a malicious document might tell a model to do, only tools actually
+    # registered in the ToolRegistry can ever execute - there's no code path from "the
+    # model decided to call X" to "X ran" that skips this lookup.
+    with pytest.raises(ToolError, match="unknown tool"):
+        _registry().call("delete_all_users", {})

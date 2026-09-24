@@ -14,6 +14,11 @@ a fast, clear error for the common case instead of a raw driver exception.
 Raw sqlite3, not the SQLAlchemy engine sample_app/loopline/app/database.py uses: this
 tool runs caller-supplied SQL *text* directly, not ORM-mapped object queries, and
 needs the read-only URI mode SQLAlchemy doesn't expose without extra plumbing.
+
+Since Episode 13: a free-text column (a ticket comment, say) is exactly the kind of
+place someone accidentally pastes a real credential, so every string value in every
+returned row is redacted here, at the source - not left to format_tool_result()'s
+later pass alone.
 """
 from __future__ import annotations
 
@@ -23,6 +28,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from ..security.redaction import redact_secrets
 from .base import ToolError
 
 MAX_ROWS = 100
@@ -55,7 +61,11 @@ def query_database(sql: str, limit: int = 20, *, db_path: Path) -> list[dict]:
     finally:
         connection.close()
 
-    return [dict(row) for row in rows]
+    return [_redact_row(dict(row)) for row in rows]
+
+
+def _redact_row(row: dict) -> dict:
+    return {key: redact_secrets(value) if isinstance(value, str) else value for key, value in row.items()}
 
 
 def resolve_sqlite_path(database_url: str, *, repo_root: Path) -> Path:

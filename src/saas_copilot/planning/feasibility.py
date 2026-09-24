@@ -4,6 +4,10 @@ pass - instead of agent.py's react-one-step-at-a-time loop every other domain us
 This is the first place in the course the model gets real latitude (it designs its
 own plan), and even that is bounded: a fixed number of steps, one revision at most,
 the same evidence gate every other specialist already enforces.
+
+Since Episode 13, every observation line already carries format_tool_result()'s
+data/instruction labeling and secret redaction, and the shipped draft gets a final
+redact_answer() pass on its own text, same as agent.py's reactive loop.
 """
 from __future__ import annotations
 
@@ -13,6 +17,7 @@ from ..agent_types import AgentRunResult, MissingEvidenceError
 from ..answer import Answer
 from ..llm.base import LLMClient, Message
 from ..prompts import ANSWER_SYSTEM_PROMPT
+from ..security.redaction import redact_answer
 from ..specialists import Specialist
 from ..structured import complete_structured
 from ..tools.base import ToolError
@@ -118,7 +123,7 @@ def assess_feasibility(
         draft = complete_structured(client, synthesis_messages, Answer)
 
     return AgentRunResult(
-        answer=draft,
+        answer=redact_answer(draft),
         domain=specialist.domain,
         steps_taken=len(ordered_steps),
         tools_called=tuple(tools_called),

@@ -16,6 +16,14 @@ phrased as a command ("Deactivate...") gets refused and escalated, never routed 
 security/intent.py. "Can answer" and "can act" are different things, and nothing in
 this codebase can act - every tool is read-only - so a question asking the agent to
 act gets a refusal that says so, not an answer that quietly pretends otherwise.
+
+Since Episode 13, every tool result observed in the loop already arrives labeled as
+DATA and secret-redacted (format_tool_result(), tools/formatting.py) before it's ever
+appended to `messages` - a document or log line the agent reads can't pass itself off
+as an instruction just because it's now sitting in the same message list a real
+instruction would be in. The final answer gets one more redaction pass on its way out
+(security/redaction.py's redact_answer()), for the different case of a secret the
+*user* pasted directly into their own question.
 """
 from __future__ import annotations
 
@@ -39,6 +47,7 @@ from .llm.base import LLMClient, Message
 from .prompts import ANSWER_SYSTEM_PROMPT
 from .router import classify
 from .security.intent import CONFIRMATION_MARKER, build_refusal_answer, detect_destructive_intent
+from .security.redaction import redact_answer
 from .specialists import Specialist, get_specialist
 from .structured import complete_structured
 from .tools.base import ToolError
@@ -175,7 +184,7 @@ def _run_reactive_loop(
                     f"one of {sorted(specialist.required_evidence_tools)} first"
                 )
             return AgentRunResult(
-                answer=answer,
+                answer=redact_answer(answer),
                 domain=specialist.domain,
                 steps_taken=step_number,
                 tools_called=tuple(all_tools_called),
@@ -191,7 +200,9 @@ def _run_reactive_loop(
             result = registry.call(call.tool, call.arguments)
             evidence_tools_called.add(call.tool)
             all_tools_called.append(call.tool)
-            observation = f"Tool result: {format_tool_result(result)}"
+            # format_tool_result() already labels this as DATA, not instructions
+            # (Episode 13) - no separate "Tool result:" prefix needed on top of it.
+            observation = format_tool_result(result)
         except ToolError as exc:
             observation = f"Tool error: {exc}"
 
