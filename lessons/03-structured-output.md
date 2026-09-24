@@ -1,5 +1,13 @@
 # Episode 3 — System prompts and structured output
 
+> **Note (added in Episode 4):** `parse_answer()` and `complete_structured()` below
+> were later generalized to `parse_structured(raw, schema)` and
+> `complete_structured(client, messages, schema, ...)` once the router needed the same
+> retry-on-malformed-output logic for a second schema (`RouteDecision`). The concepts
+> on this page are unchanged; only the function signatures are — see
+> [`lessons/04-routing.md`](04-routing.md) and the `refactor(copilot)` commit right
+> before it.
+
 **On screen:** the Episode 2 fake-provider snippet, but now asking for JSON back.
 
 ## Learning objective
