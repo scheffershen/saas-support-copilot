@@ -41,6 +41,11 @@ decides what's even a *candidate*, not a suggestion the LLM is asked to respect.
    documented as the wrong default for production, which must deny unknown identities,
    not allow them. Episode 17 revisits this.
 
+   **Update (Episode 17):** closed - `role=None` is now the least-privileged caller,
+   not the most. See [`lessons/17-prototype-vs-production-architecture.md`](17-prototype-vs-production-architecture.md)
+   for the live before/after. What's described above was accurate through Episode 16;
+   left as written rather than edited quietly, same as Episode 1's citation note.
+
 ## Implement
 
 - [`src/saas_copilot/security/roles.py`](../src/saas_copilot/security/roles.py) — `ROLES`, `validate_role`.
