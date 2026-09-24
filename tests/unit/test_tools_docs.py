@@ -43,11 +43,12 @@ def test_search_docs_raises_when_nothing_matches() -> None:
         search_docs("qxjzvbfwmnpokrlghti", limit=10, index=_index())
 
 
-def test_search_docs_with_no_role_can_see_the_restricted_doc() -> None:
-    # role=None (the default) means "no known caller identity" - a prototype
-    # convenience, not a production-safe default. See security/classification.py.
+def test_search_docs_with_no_role_cannot_see_the_restricted_doc() -> None:
+    # role=None (the default) means "no known caller identity" - Episode 17 flips this
+    # from a prototype convenience to a production-shaped default: unknown identity is
+    # the least-privileged caller, not the most. See security/classification.py.
     results = search_docs("force-deactivate a compromised account", limit=10, index=_index())
-    assert any(doc.path == "docs/admin-runbook.md" for doc in results)
+    assert not any(doc.path == "docs/admin-runbook.md" for doc in results)
 
 
 def test_search_docs_with_an_authorized_role_can_see_the_restricted_doc() -> None:

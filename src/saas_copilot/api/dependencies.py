@@ -39,9 +39,11 @@ def get_role(x_user_role: str | None = Header(default=None)) -> str | None:
     allowlisted root and bound role since Episode 5/10: identity comes from the
     caller, not from what the caller's own request content claims to be.
 
-    role=None (no header sent) keeps this course's existing prototype default -
-    "no known identity" still means "show everything" (security/classification.py).
-    Flipping that default is explicitly Episode 17's job, not this one's.
+    role=None (no header sent) is the least-privileged caller as of Episode 17 -
+    "no known identity" no longer means "show everything"; see
+    security/classification.py::is_visible_to for the enforcement. This function
+    itself still doesn't verify *who* is asking, only what they claim - that's the
+    SSO/authentication gap the Episode 17 checklist names as still open.
     """
     if x_user_role is not None:
         validate_role(x_user_role)  # unknown role -> UnknownRoleError -> 400, see main.py

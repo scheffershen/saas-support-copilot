@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from saas_copilot.api.dependencies import get_llm_client, get_registry
+from saas_copilot.api.dependencies import get_llm_client, get_registry, get_role
 from saas_copilot.api.main import app
 from saas_copilot.config import Settings
 from saas_copilot.evals import GOLDEN_CASES
@@ -200,6 +200,20 @@ def test_get_registry_binds_the_role_all_the_way_to_the_tools_own_filtering() ->
     # proves at the tool layer - re-proven here through the API's own wiring.
     resources = build_shared_resources(Settings(), repo_root=Path.cwd())
     registry = get_registry(resources=resources, role="support_agent")
+
+    results = registry.call("search_docs", {"query": "force-deactivate a compromised account"})
+
+    assert not any(doc.path == "docs/admin-runbook.md" for doc in results)
+
+
+def test_get_registry_with_no_role_header_can_no_longer_see_the_restricted_doc() -> None:
+    # Episode 17: the same chain as above, but role=None - a real caller who never
+    # sent X-User-Role at all, the actual shape of the gap this episode closes.
+    # get_role(x_user_role=None) is what main.py's dependency injection produces for
+    # that request; proven live before the fix (see lessons/17-...) that this used to
+    # return docs/admin-runbook.md.
+    resources = build_shared_resources(Settings(), repo_root=Path.cwd())
+    registry = get_registry(resources=resources, role=get_role(x_user_role=None))
 
     results = registry.call("search_docs", {"query": "force-deactivate a compromised account"})
 

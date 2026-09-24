@@ -13,7 +13,16 @@ def test_the_admin_runbook_is_restricted_to_support_lead() -> None:
     assert not is_visible_to("docs/admin-runbook.md", "billing_admin")
 
 
-def test_no_role_is_treated_as_visible_to_everyone() -> None:
-    # A prototype convenience (no auth layer exists yet) - documented in
-    # classification.py as something a production system must flip to deny-by-default.
-    assert is_visible_to("docs/admin-runbook.md", None)
+def test_no_role_can_no_longer_see_the_restricted_doc() -> None:
+    # Episode 17: flipped from the Episode 10 default. An unknown caller is the
+    # least-privileged one now, not the most - it no longer gets treated as
+    # implicitly authorized for a doc that names specific allowed roles.
+    assert not is_visible_to("docs/admin-runbook.md", None)
+
+
+def test_no_role_can_still_see_an_unrestricted_doc() -> None:
+    # The flip is narrower than "unknown caller sees nothing" - it only removes the
+    # implicit grant to content that names specific roles. Ordinary docs (no entry in
+    # RESTRICTED_DOCS at all) stay visible to everyone, known role or not - otherwise
+    # every usage-domain answer would need a role header just to find anything.
+    assert is_visible_to("docs/creating-a-ticket.md", None)
