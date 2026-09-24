@@ -225,4 +225,8 @@ specifically, what stands between this and a real deployment. That list is the a
 next step for anyone taking this further, not an afterthought: identity that's
 actually verified, tenant isolation, a real audit trail, rate limits, and everything
 else in it, closed one real, tested change at a time - exactly how the other eighteen
-episodes got built.
+episodes got built. See [`lessons/prompting-the-build.md`](prompting-the-build.md) for
+that "how," made explicit: every one of those 18 episodes was built by prompting an
+AI coding agent, not by hand-typing the implementation - the same standing discipline
+(one focused, tested change; verify before writing it down; correct drift in writing)
+is exactly what closing the checklist above will still require.

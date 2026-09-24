@@ -85,7 +85,7 @@ saas-support-copilot/
 ├── docker-compose.yml     # optional MySQL, for query_database (Episode 16)
 ├── .env.example
 ├── README.md
-├── docs/                  # production-readiness checklist (Episode 17)
+├── docs/                  # production-readiness checklist + architecture diagrams
 ├── src/saas_copilot/      # the copilot — built episode by episode
 │   └── mcp_server/        # standalone MCP server for query_database (Episode 16)
 ├── sample_app/loopline/   # the fictional target SaaS app (docs, source, schema, logs)
@@ -99,6 +99,18 @@ saas-support-copilot/
 Start with [`lessons/00-setup.md`](lessons/00-setup.md) and finish with
 [the capstone](lessons/18-capstone-demonstration.md), which runs the whole system —
 citations, refusal, RBAC, evaluation, local deployment — against a real model.
+
+For a system-level map instead of an episode-by-episode one, see
+[`docs/copilot-blueprint.html`](docs/copilot-blueprint.html) — four diagrams (system
+boundary, request sequence, RAG pipeline, agent decision flowchart) read directly off
+the current code. Open it in a browser; no build step.
+
+Every line in this repository was written by prompting an AI coding agent, never
+hand-typed — [`lessons/prompting-the-build.md`](lessons/prompting-the-build.md) is the
+missing 19th-and-a-half lesson: not a new technical topic, but the discipline (one
+focused, tested change per prompt; verify before writing anything down; correct drift
+in writing) that made a two-word instruction like "Continue to Episode 12" reliably
+produce a fully tested, fully documented capability, 75 real commits running.
 
 ## License
 

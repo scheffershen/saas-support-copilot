@@ -18,6 +18,12 @@
    explicit sign-off.
 4. **Local-first development.** No paid API key required to follow along — Episode 2
    introduces a fake `LLMClient` alongside a real provider adapter.
+5. **Who's actually typing.** Every line in this repository was produced by prompting
+   an AI coding agent, never by hand-writing the implementation — and every lesson
+   from here on teaches exactly the knowledge that makes that work: not syntax, but
+   why a design is correct, and how to verify that it is. See
+   [`lessons/prompting-the-build.md`](prompting-the-build.md) once you've got a feel
+   for a few episodes — it's about the whole course, not a step in it.
 
 ## Tour
 
