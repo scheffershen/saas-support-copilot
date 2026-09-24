@@ -13,11 +13,11 @@ before touching a real API key.
 1. **Messages.** A chat call is a list of `{role, content}` turns (`system`, `user`,
    `assistant`) — `Message` in `llm/base.py`. The system message is instructions, user
    messages are the conversation; nothing about that list is inherently trustworthy,
-   which matters a lot once Episode 12 puts retrieved documents into it.
+   which matters a lot once Episode 13 puts retrieved documents into it.
 2. **Prompts, tokens, context windows.** A prompt is just the message list rendered to
    text; tokens are the provider's unit of both cost and context-window budget.
    `FakeLLMClient` estimates tokens at ~4 chars/token — good enough to reason about
-   budgets, wrong as an actual tokenizer (Episode 14 revisits this for real cost
+   budgets, wrong as an actual tokenizer (Episode 15 revisits this for real cost
    tracking).
 3. **Temperature.** `complete(..., temperature=0.2)` — low temperature for a support
    copilot that's supposed to answer consistently from evidence, not brainstorm.

@@ -37,7 +37,7 @@ that data right now, with types and tests, so nothing downstream is guessing.
    reads and we don't want one slow tool call blocking every other request.
 6. **venv / pyproject.toml / dependency pinning.** Recap from Episode 0: the `>=`
    ranges in `pyproject.toml` are fine for a course you re-run today, but a real
-   deployment (Episode 15) wants an exact, locked set of versions so "works on my
+   deployment (Episode 16) wants an exact, locked set of versions so "works on my
    machine" doesn't bite you in production.
 7. **pytest.** `tests/unit/test_models.py` sets the pattern for the rest of the course:
    one happy path and one failure path per behavior, not just one test per function.

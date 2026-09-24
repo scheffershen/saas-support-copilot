@@ -5,7 +5,7 @@
 > `ToolRegistry`'s thread-pool timeout wrapper turned out simpler - no event loop
 > needed in tests, and it solves the same "don't let one slow call block everything"
 > problem for this scale of I/O. Real `async def` still shows up, but at the layer
-> where it actually earns its keep: Episode 13's FastAPI server, handling many
+> where it actually earns its keep: Episode 14's FastAPI server, handling many
 > concurrent requests at once - and even there, FastAPI runs sync path functions in a
 > thread pool automatically, which is the same pattern `ToolRegistry` already uses
 > here by hand. Plans change when they meet the actual problem; this is that, not an
@@ -43,7 +43,7 @@ completely.
 6. **Authorization.** Two different levels, don't conflate them: this episode's
    allowlisted roots are *system*-level authorization (what the process is allowed to
    touch, period). *User*-level authorization — what a specific person's role lets
-   them see — is Episode 9.
+   them see — is Episode 10.
 7. **Result limits.** `search_docs`/`search_code` cap result counts, `read_source`
    truncates past 20k characters, `list_files` refuses to return more than 200
    entries rather than silently dumping an entire tree into the model's context.
@@ -109,7 +109,7 @@ actually reject anything, the name describes current behavior, not a guarantee).
 `model_config = ConfigDict(extra="forbid")` to every `*Args` schema, and change that
 test's name and assertion to match the new, stricter behavior. Then argue for yourself
 which is more correct for an LLM-facing schema: silently dropping fields the model
-made up, or rejecting them loudly. (There's a real answer, and Episode 12 is a hint.)
+made up, or rejecting them loudly. (There's a real answer, and Episode 13 is a hint.)
 
 ## Next
 

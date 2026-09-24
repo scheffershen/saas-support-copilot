@@ -40,7 +40,7 @@ chooses, one step at a time, whether to call a tool or answer.
    errored" is not evidence either.
 7. **Cancellation.** `cancel_token: threading.Event` is checked before the router call
    and before every step - a pre-cancelled run does zero work, not "one wasted call
-   before it notices." Episode 13 will wire a real request's disconnect into this.
+   before it notices." Episode 14 will wire a real request's disconnect into this.
 8. **A third use of `complete_structured()`.** `Answer` (Ep. 3), `RouteDecision`
    (Ep. 4), now `AgentStep`. Three real call sites for the same generalized
    parse-validate-retry machinery, zero duplicated retry logic.

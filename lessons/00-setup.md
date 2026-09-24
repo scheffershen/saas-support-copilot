@@ -13,7 +13,7 @@
    feature-feasibility questions. We're explicit about which parts are which, because
    "agent" is not automatically better than "workflow."
 3. **Prototype vs production.** Everything here runs locally, with no auth, on sample
-   data. Episode 16 is a full list of what's still missing for a real deployment —
+   data. Episode 17 is a full list of what's still missing for a real deployment —
    including the rule that none of this touches a real company's code or data without
    explicit sign-off.
 4. **Local-first development.** No paid API key required to follow along — Episode 2

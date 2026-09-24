@@ -18,7 +18,7 @@ separation is what makes the rest of the course tractable: the bug specialist
 2. **Deterministic workflows vs. free-form agents.** `classify()` doesn't let the model
    decide what happens after it answers — the *code* looks at `decision.domain` and
    picks a path. That's a workflow: a fixed shape the LLM fills in, not an agent
-   freely deciding its own next step. We stay here through Episode 9; Episode 10 is
+   freely deciding its own next step. We stay here through Episode 10; Episode 11 is
    the first place the model gets any real latitude, and even then it's bounded.
 3. **A second schema, not a bigger one.** `RouteDecision` (`domain`, `rationale`) could
    have been "just use `Answer` with empty citations." Rejected on purpose — that would
@@ -74,7 +74,7 @@ returns. Add a fast path: a `KEYWORD_HINTS: dict[str, Domain]` of a few obvious 
 words (e.g. `"crash"`, `"error"`, `"traceback"` → `bug`) that, on an exact substring
 match, returns a `RouteDecision` with `rationale="keyword match"` *without* calling the
 LLM at all. Write a test proving the fast path skips `client.call_count`. (This is a
-real cost/latency optimization, not just an exercise — Episode 14 will measure how
+real cost/latency optimization, not just an exercise — Episode 15 will measure how
 often it actually fires.)
 
 ## Next

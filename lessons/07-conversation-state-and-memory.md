@@ -75,7 +75,7 @@ has nothing to resolve "them" against.
 
 ## Exercise
 
-`Session.turns` has no bound on total *size* — only Episode 14's evals will notice if
+`Session.turns` has no bound on total *size* — only Episode 15's evals will notice if
 a handful of very long turns blow past what fits in context, even under
 `max_turns`. Add a `Session.as_context(max_turns=..., max_chars=...)` limit that drops
 the oldest turns first until the rendered context fits, and a test with a few
