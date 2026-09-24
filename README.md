@@ -4,7 +4,7 @@ A step-by-step Python build of a read-only chatbot that answers **usage**, **bug
 **feature-feasibility** questions about a SaaS application — by reading its end-user
 help docs, source code, Git history, database, and logs. This is the companion project
 for a YouTube course: every episode is one focused, tested change, and the commit
-history *is* the course.
+history *is* the course. The course is complete — 19 episodes, 0 through 18.
 
 > Learning prototype, not a production-security guarantee. See [`lessons/`](lessons/)
 > for the full arc and the [production-readiness checklist](docs/production-readiness-checklist.md)
@@ -90,12 +90,15 @@ saas-support-copilot/
 │   └── mcp_server/        # standalone MCP server for query_database (Episode 16)
 ├── sample_app/loopline/   # the fictional target SaaS app (docs, source, schema, logs)
 ├── tests/
+│   └── integration/       # cross-subsystem tests, one real conversation (Episode 18)
 └── lessons/               # per-episode talking points, in order
 ```
 
 ## Course
 
-Start with [`lessons/00-setup.md`](lessons/00-setup.md).
+Start with [`lessons/00-setup.md`](lessons/00-setup.md) and finish with
+[the capstone](lessons/18-capstone-demonstration.md), which runs the whole system —
+citations, refusal, RBAC, evaluation, local deployment — against a real model.
 
 ## License
 
