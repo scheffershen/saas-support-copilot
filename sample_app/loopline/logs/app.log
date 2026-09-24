@@ -1,0 +1,19 @@
+2026-09-20 09:14:02 INFO  loopline.tickets: created ticket id=1 requester_id=4
+2026-09-20 09:15:47 INFO  loopline.tickets: created ticket id=2 requester_id=2
+2026-09-20 09:16:03 INFO  loopline.tickets: assigned ticket id=1 assignee_id=1
+2026-09-20 09:20:11 INFO  loopline.tickets: assigned ticket id=2 assignee_id=1
+2026-09-21 11:02:55 INFO  loopline.tickets: created ticket id=3 requester_id=4
+2026-09-22 14:33:10 INFO  loopline.tickets: created ticket id=4 requester_id=2
+2026-09-22 14:40:02 INFO  loopline.tickets: assigned ticket id=4 assignee_id=5
+2026-09-23 08:05:44 INFO  loopline.comments: comment added ticket_id=1 author_id=1
+2026-09-23 08:05:44 INFO  loopline.notifications: notified user_id=4 re ticket_id=1
+2026-09-23 09:12:30 INFO  loopline.comments: comment added ticket_id=2 author_id=1
+2026-09-23 09:12:30 INFO  loopline.notifications: notified user_id=2 re ticket_id=2
+2026-09-23 15:47:02 INFO  loopline.comments: comment added ticket_id=4 author_id=2
+2026-09-23 15:47:02 ERROR loopline.notifications: failed to notify assignee for ticket_id=4
+Traceback (most recent call last):
+  File "sample_app/loopline/app/notifications.py", line 24, in notify_assignee_on_comment
+    assignee_settings = settings[ticket.assignee_id]
+                         ~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+KeyError: 5
+2026-09-23 15:47:02 ERROR loopline.api: unhandled exception on POST /tickets/4/comments
