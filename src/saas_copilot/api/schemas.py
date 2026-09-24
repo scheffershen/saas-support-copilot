@@ -28,6 +28,8 @@ class AskResponse(BaseModel):
     refusal_reason: str | None
     steps_taken: int
     tools_called: list[str]
+    latency_ms: float
+    tokens_used: int
 
 
 class HealthResponse(BaseModel):
@@ -41,9 +43,9 @@ class IngestResponse(BaseModel):
 
 
 class EvaluationsResponse(BaseModel):
-    # Empty on purpose, not a placeholder pretending otherwise: no evaluation suite
-    # is registered yet. Episode 15 populates this; this shape is what it populates.
-    suites: list[str]
+    # suite name -> case count, so a caller can see suite size before deciding to run
+    # one (a real golden-dataset run makes real LLM calls, per case).
+    suites: dict[str, int]
 
 
 class ErrorResponse(BaseModel):

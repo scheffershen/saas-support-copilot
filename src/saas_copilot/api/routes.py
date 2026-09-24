@@ -14,13 +14,17 @@ different mechanism.
 from __future__ import annotations
 
 import asyncio
+import time
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ..config import settings
+from ..evals import EVAL_SUITES, run_suite
+from ..evals.schema import SuiteResult
 from ..llm.base import LLMClient
 from ..memory.orchestration import ask
 from ..memory.store import SessionStore
+from ..telemetry import TracingLLMClient, log_run
 from ..tools import SharedResources, build_shared_resources
 from ..tools.registry import ToolRegistry
 from .dependencies import get_llm_client, get_registry, get_session_store, get_shared_resources
@@ -45,7 +49,25 @@ async def ask_endpoint(
     registry: ToolRegistry = Depends(get_registry),
     store: SessionStore = Depends(get_session_store),
 ) -> AskResponse:
-    result = await asyncio.to_thread(ask, client, registry, store, payload.session_id, payload.question)
+    # A fresh TracingLLMClient per request - usage answers "what did THIS request
+    # cost," not a running total across every caller the process ever serves.
+    tracing_client = TracingLLMClient(client)
+
+    started_at = time.monotonic()
+    result = await asyncio.to_thread(ask, tracing_client, registry, store, payload.session_id, payload.question)
+    latency_ms = (time.monotonic() - started_at) * 1000
+
+    log_run(
+        request_id=request.state.request_id,
+        domain=result.domain,
+        latency_ms=latency_ms,
+        tokens_used=tracing_client.usage.total_tokens,
+        steps_taken=result.steps_taken,
+        tools_called=result.tools_called,
+        citations_count=len(result.answer.citations),
+        refused=result.answer.refused,
+    )
+
     return AskResponse(
         request_id=request.state.request_id,
         domain=result.domain,
@@ -56,6 +78,8 @@ async def ask_endpoint(
         refusal_reason=result.answer.refusal_reason,
         steps_taken=result.steps_taken,
         tools_called=list(result.tools_called),
+        latency_ms=latency_ms,
+        tokens_used=tracing_client.usage.total_tokens,
     )
 
 
@@ -74,4 +98,21 @@ async def ingest(request: Request) -> IngestResponse:
 
 @router.get("/evaluations")
 async def evaluations() -> EvaluationsResponse:
-    return EvaluationsResponse(suites=[])
+    return EvaluationsResponse(suites={name: len(cases) for name, cases in EVAL_SUITES.items()})
+
+
+@router.post("/evaluations/{suite_name}/run")
+async def run_evaluations(
+    suite_name: str,
+    client: LLMClient = Depends(get_llm_client),
+    resources: SharedResources = Depends(get_shared_resources),
+) -> SuiteResult:
+    """Actually runs the named suite's cases through run_agent(), via whichever
+    LLMClient this server is configured with - a real eval, making real LLM calls,
+    not a mock. Offloaded to a thread like /ask, for the same reason: this can take
+    a while (one or more model calls per case) and shouldn't block the event loop.
+    """
+    if suite_name not in EVAL_SUITES:
+        raise HTTPException(status_code=404, detail=f"no such evaluation suite: {suite_name!r}")
+
+    return await asyncio.to_thread(run_suite, client, resources, EVAL_SUITES[suite_name], suite_name=suite_name)

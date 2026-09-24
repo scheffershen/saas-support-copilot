@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from saas_copilot.api.dependencies import get_llm_client, get_registry
 from saas_copilot.api.main import app
 from saas_copilot.config import Settings
+from saas_copilot.evals import GOLDEN_CASES
 from saas_copilot.llm.fake import FakeLLMClient
 from saas_copilot.tools import build_shared_resources
 
@@ -73,6 +74,11 @@ def test_ask_happy_path_returns_a_full_answer(test_client) -> None:
     assert body["citations"] == ["docs/getting-started.md"]
     assert body["refused"] is False
     assert body["request_id"]
+    # >= 0, not > 0: a FakeLLMClient round-trip through asyncio.to_thread can be
+    # fast enough to round to exactly 0.0 at this clock's resolution - that's not a
+    # bug, real latency on a real provider call will never be this fast.
+    assert body["latency_ms"] >= 0
+    assert body["tokens_used"] > 0  # FakeLLMClient's rough char/4 estimate, but nonzero
 
 
 def test_ask_echoes_a_caller_supplied_request_id(test_client) -> None:
@@ -141,10 +147,35 @@ def test_ingest_rebuilds_and_reports_a_real_chunk_count(test_client) -> None:
     assert body["chunks_indexed"] > 0
 
 
-def test_evaluations_reports_no_suites_yet(test_client) -> None:
+def test_evaluations_lists_the_golden_suite_and_its_size(test_client) -> None:
     response = test_client.get("/evaluations")
     assert response.status_code == 200
-    assert response.json() == {"suites": []}
+    assert response.json() == {"suites": {"golden": len(GOLDEN_CASES)}}
+
+
+def test_running_an_unknown_suite_404s(test_client) -> None:
+    response = test_client.post("/evaluations/not-a-real-suite/run")
+    assert response.status_code == 404
+
+
+def test_running_the_golden_suite_reports_a_result_per_case(test_client) -> None:
+    # Doesn't need every case to pass - proving the ENDPOINT's wiring (suite lookup,
+    # a real per-case role-scoped registry, one CaseResult per case, aggregated usage)
+    # is this test's job, not the agent's judgment, which a FakeLLMClient has none of
+    # (see evals/runner.py's own docstring on that distinction). A case whose scripted
+    # response doesn't match what it actually needed just fails cleanly - run_case()
+    # catches that, it doesn't crash the suite - so a modest, imperfect script still
+    # proves every case produced a result.
+    _use_llm_client(FakeLLMClient(responses=[_route("usage"), _final_answer("usage", ["docs/creating-a-ticket.md"])]))
+
+    response = test_client.post("/evaluations/golden/run")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["suite"] == "golden"
+    assert body["total"] == len(GOLDEN_CASES)
+    assert len(body["results"]) == len(GOLDEN_CASES)
+    assert body["tokens_used"] > 0
 
 
 def test_get_registry_binds_the_role_all_the_way_to_the_tools_own_filtering() -> None:
