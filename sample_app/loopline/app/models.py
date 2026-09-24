@@ -5,7 +5,7 @@ schema.sql; if you change one, change the other.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -41,7 +41,7 @@ class Ticket(Base):
     status: Mapped[str] = mapped_column(String(20), default="open")
     requester_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     assignee_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
 
 class Comment(Base):
@@ -51,4 +51,4 @@ class Comment(Base):
     ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"))
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     body: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
