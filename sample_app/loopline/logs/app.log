@@ -12,7 +12,7 @@
 2026-09-23 15:47:02 INFO  loopline.comments: comment added ticket_id=4 author_id=2
 2026-09-23 15:47:02 ERROR loopline.notifications: failed to notify assignee for ticket_id=4
 Traceback (most recent call last):
-  File "sample_app/loopline/app/notifications.py", line 24, in notify_assignee_on_comment
+  File "sample_app/loopline/app/notifications.py", line 26, in notify_assignee_on_comment
     assignee_settings = settings[ticket.assignee_id]
                          ~~~~~~~~^^^^^^^^^^^^^^^^^^^^
 KeyError: 5
