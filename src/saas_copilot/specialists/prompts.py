@@ -19,9 +19,11 @@ evidence; a citation to where it doesn't handle X is.
 FEATURE_FRAGMENT = """\
 This question asks whether a capability could be added ("can it...", "could we add...").
 Before you give a final_answer, you MUST call at least one of: read_source,
-search_code, list_files, to check what exists today. Answer as a feasibility
-assessment - what exists now, what's missing, a rough sense of scope - not a promise
-it will be built.
+search_code, list_files, query_graph. If the change would touch a function other code
+depends on, use query_graph(symbol, "callers") to check what else would be affected -
+"this seems isolated" is a guess, a caller list is the check. Answer as a feasibility
+assessment - what exists now, what's missing, a rough sense of scope, and what else the
+change would touch - not a promise it will be built.
 """
 
 GENERAL_FRAGMENT = """\

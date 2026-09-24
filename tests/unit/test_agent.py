@@ -68,6 +68,23 @@ def test_bug_specialist_gathers_evidence_then_answers() -> None:
     assert result.tools_called == ("search_code",)
 
 
+def test_feature_specialist_can_satisfy_evidence_via_query_graph() -> None:
+    # The Episode 9 promise made good: a blast-radius check via the real call graph
+    # counts as evidence for a feature-feasibility answer, exercised through the full
+    # loop (route -> call query_graph for real against Loopline -> answer), not just
+    # asserted as a static property of the Specialist.
+    client = FakeLLMClient(responses=[
+        _route("feature"),
+        _call_tool("query_graph", symbol="services.assign_ticket", direction="callers"),
+        _final_answer("feature", ["app/services.py"]),
+    ])
+
+    result = run_agent(client, _registry(), "could we let anyone self-assign a ticket?")
+
+    assert result.domain == "feature"
+    assert result.tools_called == ("query_graph",)
+
+
 def test_usage_specialist_can_answer_without_a_tool_call() -> None:
     client = FakeLLMClient(responses=[
         _route("usage"),

@@ -21,6 +21,12 @@ def test_feature_specialist_requires_evidence() -> None:
     assert "read_source" in specialist.required_evidence_tools
 
 
+def test_feature_specialist_can_satisfy_evidence_via_query_graph() -> None:
+    # Added in Episode 9: a blast-radius check via the call graph counts as evidence
+    # on its own, same as reading source directly.
+    assert "query_graph" in get_specialist("feature").required_evidence_tools
+
+
 def test_usage_specialist_does_not_require_evidence() -> None:
     assert get_specialist("usage").required_evidence_tools == frozenset()
 

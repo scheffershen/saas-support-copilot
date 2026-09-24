@@ -28,7 +28,7 @@ SPECIALISTS: dict[Domain, Specialist] = {
     "feature": Specialist(
         domain="feature",
         prompt_fragment=FEATURE_FRAGMENT,
-        required_evidence_tools=frozenset({"read_source", "search_code", "list_files"}),
+        required_evidence_tools=frozenset({"read_source", "search_code", "list_files", "query_graph"}),
     ),
     "general": Specialist(domain="general", prompt_fragment=GENERAL_FRAGMENT),
 }
