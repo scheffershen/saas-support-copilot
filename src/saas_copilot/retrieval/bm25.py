@@ -52,23 +52,33 @@ class BM25Index:
         # unlike the classic Robertson-Sparck Jones formula it's adapted from.
         return math.log((self._n_docs - df + 0.5) / (df + 0.5) + 1)
 
-    def search(self, query: str, limit: int = 10) -> list[ScoredChunk]:
+    def search(self, query: str, limit: int = 10, *, eligible: set[int] | None = None) -> list[ScoredChunk]:
+        """`eligible`, if given, restricts scoring to only those chunk indices - an
+        ineligible chunk is never scored, ranked, or returned, regardless of how well
+        it would otherwise match. This is what makes retrieval-time authorization
+        (Episode 10) a hard boundary rather than a post-hoc filter on results: a
+        chunk excluded here was never a candidate in the first place.
+        """
         query_terms = tokenize(query)
-        scores = [0.0] * self._n_docs
+        indices = range(self._n_docs) if eligible is None else sorted(eligible)
+        scores: dict[int, float] = {}
 
-        for doc_index in range(self._n_docs):
+        for doc_index in indices:
             term_freqs = self._term_frequencies[doc_index]
             doc_length = self._doc_lengths[doc_index]
             length_norm = 1 - B + B * (doc_length / self._avg_doc_length if self._avg_doc_length else 0)
 
+            score = 0.0
             for term in query_terms:
                 freq = term_freqs.get(term, 0)
                 if freq == 0:
                     continue
-                scores[doc_index] += self._idf(term) * (freq * (K1 + 1)) / (freq + K1 * length_norm)
+                score += self._idf(term) * (freq * (K1 + 1)) / (freq + K1 * length_norm)
+            if score > 0:
+                scores[doc_index] = score
 
         ranked = sorted(
-            (ScoredChunk(index=i, score=s) for i, s in enumerate(scores) if s > 0),
+            (ScoredChunk(index=i, score=s) for i, s in scores.items()),
             key=lambda sc: sc.score,
             reverse=True,
         )

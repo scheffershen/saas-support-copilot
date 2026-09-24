@@ -6,6 +6,8 @@ file - anything reducible to a list of Documents can be indexed.
 """
 from __future__ import annotations
 
+from typing import Callable
+
 from ..models import Document
 from .bm25 import BM25Index
 from .chunking import chunk_text
@@ -46,28 +48,49 @@ class DocumentIndex:
         """
         return tuple(self._chunks)
 
-    def search_bm25(self, query: str, limit: int = 10) -> list[Document]:
-        return [self._chunks[sc.index] for sc in self._bm25.search(query, limit=limit)]
+    def eligible_indices(self, predicate: Callable[[Document], bool]) -> set[int]:
+        """The chunk indices for which predicate(chunk) is True - e.g.
+        `index.eligible_indices(lambda doc: is_visible_to(doc.path, role))`. Pass the
+        result as `eligible` to any search method to make it a hard candidate-set
+        restriction, not a post-hoc filter on results.
+        """
+        return {i for i, chunk in enumerate(self._chunks) if predicate(chunk)}
 
-    def search_semantic(self, query: str, limit: int = 10, *, min_similarity: float = DEFAULT_MIN_SIMILARITY) -> list[Document]:
-        ranking = self._semantic_ranking(query, min_similarity=min_similarity)
+    def search_bm25(self, query: str, limit: int = 10, *, eligible: set[int] | None = None) -> list[Document]:
+        return [self._chunks[sc.index] for sc in self._bm25.search(query, limit=limit, eligible=eligible)]
+
+    def search_semantic(
+        self,
+        query: str,
+        limit: int = 10,
+        *,
+        min_similarity: float = DEFAULT_MIN_SIMILARITY,
+        eligible: set[int] | None = None,
+    ) -> list[Document]:
+        ranking = self._semantic_ranking(query, min_similarity=min_similarity, eligible=eligible)
         return [self._chunks[i] for i in ranking[:limit]]
 
     def search_hybrid(
-        self, query: str, limit: int = 10, *, candidates: int = 20, min_similarity: float = DEFAULT_MIN_SIMILARITY
+        self,
+        query: str,
+        limit: int = 10,
+        *,
+        candidates: int = 20,
+        min_similarity: float = DEFAULT_MIN_SIMILARITY,
+        eligible: set[int] | None = None,
     ) -> list[Document]:
-        bm25_ranking = [sc.index for sc in self._bm25.search(query, limit=candidates)]
-        semantic_ranking = self._semantic_ranking(query, min_similarity=min_similarity)[:candidates]
+        bm25_ranking = [sc.index for sc in self._bm25.search(query, limit=candidates, eligible=eligible)]
+        semantic_ranking = self._semantic_ranking(query, min_similarity=min_similarity, eligible=eligible)[:candidates]
 
         fused = reciprocal_rank_fusion([bm25_ranking, semantic_ranking])
         return [self._chunks[index] for index, _score in fused[:limit]]
 
-    def _semantic_ranking(self, query: str, *, min_similarity: float = 0.0) -> list[int]:
+    def _semantic_ranking(
+        self, query: str, *, min_similarity: float = 0.0, eligible: set[int] | None = None
+    ) -> list[int]:
         query_vector = self._embedder.embed(query)
-        scored = [
-            (i, cosine_similarity(query_vector, embedding))
-            for i, embedding in enumerate(self._embeddings)
-        ]
+        indices = range(len(self._chunks)) if eligible is None else eligible
+        scored = [(i, cosine_similarity(query_vector, self._embeddings[i])) for i in indices]
         scored = [(i, score) for i, score in scored if score > min_similarity]
         scored.sort(key=lambda pair: pair[1], reverse=True)
         return [i for i, _score in scored]

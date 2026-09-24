@@ -8,6 +8,7 @@ from pathlib import Path
 from saas_copilot.models import Document
 from saas_copilot.retrieval.hashing_embeddings import HashingEmbeddingClient
 from saas_copilot.retrieval.index import DocumentIndex
+from saas_copilot.security.classification import is_visible_to
 
 DOCS_ROOT = Path("sample_app/loopline/docs")
 APP_ROOT = Path("sample_app/loopline/app")
@@ -82,6 +83,48 @@ def test_search_semantic_returns_nothing_for_a_genuinely_unrelated_query() -> No
 def test_search_hybrid_returns_nothing_when_both_methods_find_nothing() -> None:
     index = DocumentIndex(_load_docs(), HashingEmbeddingClient())
     assert index.search_hybrid("zzqvxlpfmnbwortkugh") == []
+
+
+def _eligible_for(index: DocumentIndex, role: str | None) -> set[int]:
+    return index.eligible_indices(lambda doc: is_visible_to(doc.path, role))
+
+
+def test_restricted_doc_is_visible_to_its_authorized_role() -> None:
+    index = DocumentIndex(_load_docs(), HashingEmbeddingClient())
+    eligible = _eligible_for(index, "support_lead")
+    results = index.search_hybrid("force-deactivate a compromised account", eligible=eligible)
+    assert any(doc.path == "docs/admin-runbook.md" for doc in results)
+
+
+def test_restricted_doc_is_invisible_to_an_unauthorized_role_even_with_the_exact_keywords() -> None:
+    # Same exact query that just proved findable for support_lead above - role is the
+    # only variable, isolating the property being tested from retrieval quality.
+    index = DocumentIndex(_load_docs(), HashingEmbeddingClient())
+    eligible = _eligible_for(index, "support_agent")
+    results = index.search_hybrid("force-deactivate a compromised account", eligible=eligible)
+    assert not any(doc.path == "docs/admin-runbook.md" for doc in results)
+
+
+def test_restricted_doc_stays_invisible_to_a_paraphrased_query_too() -> None:
+    # Different wording, same intent, deliberately sharing almost no vocabulary with
+    # "force-deactivate"/"compromised" - the point isn't that this phrasing fails to
+    # match (an unfiltered search might still stumble onto it via noise, as Episode 8
+    # found the hard way); it's that the restricted chunk was never in the candidate
+    # set at all, so no phrasing of the question could recover it.
+    index = DocumentIndex(_load_docs(), HashingEmbeddingClient())
+    eligible = _eligible_for(index, "billing_admin")
+    results = index.search_hybrid(
+        "someone's login got hacked, how do I shut off their access right away without the usual approval",
+        eligible=eligible,
+    )
+    assert not any(doc.path == "docs/admin-runbook.md" for doc in results)
+
+
+def test_unrestricted_docs_are_still_visible_to_every_role() -> None:
+    index = DocumentIndex(_load_docs(), HashingEmbeddingClient())
+    for role in ("support_agent", "support_lead", "billing_admin"):
+        results = index.search_hybrid("notification settings", eligible=_eligible_for(index, role))
+        assert any(doc.path == "docs/notifications.md" for doc in results)
 
 
 def test_document_index_is_generic_over_source_files_too() -> None:

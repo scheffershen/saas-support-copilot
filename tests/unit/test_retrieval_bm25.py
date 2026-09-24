@@ -42,3 +42,16 @@ def test_rarer_terms_contribute_more_than_common_terms() -> None:
 
 def test_bm25_index_handles_an_empty_corpus() -> None:
     assert BM25Index([]).search("anything") == []
+
+
+def test_eligible_excludes_a_chunk_even_when_it_is_the_best_match() -> None:
+    # index 0 is the only real match for "fox" - excluding it from `eligible` must
+    # mean zero results, not "the next-best (non-matching) chunk instead."
+    index = BM25Index(["the quick brown fox", "a completely unrelated sentence"])
+    assert index.search("fox", eligible={1}) == []
+
+
+def test_eligible_still_ranks_normally_within_the_allowed_subset() -> None:
+    index = BM25Index(["fox one", "fox two", "unrelated"])
+    results = index.search("fox", eligible={0, 1})
+    assert {r.index for r in results} == {0, 1}
