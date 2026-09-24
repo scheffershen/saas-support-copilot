@@ -19,6 +19,7 @@ from saas_copilot.agent import (
     run_agent,
 )
 from saas_copilot.config import Settings
+from saas_copilot.llm.base import Message
 from saas_copilot.llm.fake import FakeLLMClient
 from saas_copilot.tools import build_default_registry
 
@@ -129,6 +130,21 @@ def test_raises_after_max_steps_without_a_final_answer() -> None:
     ])
     with pytest.raises(MaxStepsExceededError):
         run_agent(client, _registry(), "why does it crash?", max_steps=2)
+
+
+def test_history_is_visible_to_both_the_router_and_the_specialist() -> None:
+    history = [
+        Message(role="user", content="what statuses can a ticket have?"),
+        Message(role="assistant", content="open, in_progress, resolved, closed."),
+    ]
+    client = FakeLLMClient(responses=[_route("usage"), _final_answer("usage", ["docs/creating-a-ticket.md"])])
+
+    run_agent(client, _registry(), "and who can change them?", history=history)
+
+    route_call_messages = client.received_messages[0]
+    specialist_call_messages = client.received_messages[1]
+    assert any(m.content == "what statuses can a ticket have?" for m in route_call_messages)
+    assert any(m.content == "what statuses can a ticket have?" for m in specialist_call_messages)
 
 
 def test_respects_a_cancellation_token_set_before_the_run() -> None:

@@ -16,12 +16,14 @@ class FakeLLMClient(LLMClient):
         """
         self._responses = responses if responses is not None else [response]
         self._call_count = 0
+        self.received_messages: list[list[Message]] = []
 
     @property
     def call_count(self) -> int:
         return self._call_count
 
     def complete(self, messages: list[Message], *, temperature: float = 0.2) -> LLMResponse:
+        self.received_messages.append(list(messages))
         content = self._responses[min(self._call_count, len(self._responses) - 1)]
         self._call_count += 1
 

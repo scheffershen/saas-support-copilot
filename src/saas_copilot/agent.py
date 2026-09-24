@@ -2,13 +2,15 @@
 
 route the question to a specialist, then let the model choose between calling a tool
 (to gather evidence) or giving a final answer, one step at a time, until it answers,
-gets cancelled, or runs out of steps. Everything here is synchronous and single-turn -
-Episode 7 adds cross-turn memory; this is what happens *within* one question.
+gets cancelled, or runs out of steps. This module knows nothing about sessions or
+storage - `history` is just prior messages a caller hands in. memory/orchestration.py
+is what turns that into cross-turn conversation state.
 """
 from __future__ import annotations
 
 import json
 import threading
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -107,15 +109,16 @@ def run_agent(
     registry: ToolRegistry,
     question: str,
     *,
+    history: Sequence[Message] = (),
     max_steps: int = 6,
     cancel_token: threading.Event | None = None,
 ) -> AgentRunResult:
     if cancel_token is not None and cancel_token.is_set():
         raise AgentCancelledError("agent run was cancelled before it started")
 
-    decision = classify(client, question)
+    decision = classify(client, question, history=history)
     specialist = get_specialist(decision.domain)
-    messages = _initial_messages(specialist, registry, question)
+    messages = _initial_messages(specialist, registry, question, history=history)
 
     evidence_tools_called: set[str] = set()
     seen_calls: set[tuple[str, str]] = set()
@@ -161,7 +164,9 @@ def run_agent(
     raise MaxStepsExceededError(f"exceeded max_steps={max_steps} without a final answer")
 
 
-def _initial_messages(specialist: Specialist, registry: ToolRegistry, question: str) -> list[Message]:
+def _initial_messages(
+    specialist: Specialist, registry: ToolRegistry, question: str, *, history: Sequence[Message] = ()
+) -> list[Message]:
     tool_menu_lines = ["Available tools:"]
     for spec in registry.specs():
         arg_names = ", ".join(spec.args_schema.model_fields)
@@ -172,7 +177,7 @@ def _initial_messages(specialist: Specialist, registry: ToolRegistry, question: 
         specialist.prompt_fragment,
         AGENT_STEP_INSTRUCTIONS.format(tool_menu="\n".join(tool_menu_lines)),
     ])
-    return [Message(role="system", content=system), Message(role="user", content=question)]
+    return [Message(role="system", content=system), *history, Message(role="user", content=question)]
 
 
 def _format_result(result: Any) -> str:
