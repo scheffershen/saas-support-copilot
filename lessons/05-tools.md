@@ -1,5 +1,16 @@
 # Episode 5 — Tools and safe tool contracts
 
+> **Note:** Episode 2 said these would become `async def`, "because they'll do real
+> file, database, and log reads." Building them, a plain synchronous function plus
+> `ToolRegistry`'s thread-pool timeout wrapper turned out simpler - no event loop
+> needed in tests, and it solves the same "don't let one slow call block everything"
+> problem for this scale of I/O. Real `async def` still shows up, but at the layer
+> where it actually earns its keep: Episode 13's FastAPI server, handling many
+> concurrent requests at once - and even there, FastAPI runs sync path functions in a
+> thread pool automatically, which is the same pattern `ToolRegistry` already uses
+> here by hand. Plans change when they meet the actual problem; this is that, not an
+> inconsistency to paper over.
+
 **On screen:** `sample_app/loopline/` in a file tree — docs/, app/, and this repo's own
 `git log` — the four things the copilot is about to be given read access to.
 
