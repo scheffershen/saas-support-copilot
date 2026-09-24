@@ -1,0 +1,789 @@
+<title>Copilot Blueprint</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f7f9fc;
+    --bg-deep: #eef1f6;
+    --surface: rgba(15,23,42,0.035);
+    --surface-2: rgba(15,23,42,0.065);
+    --border: rgba(15,23,42,0.10);
+    --border-strong: rgba(15,23,42,0.18);
+    --text: #0f172a;
+    --text-dim: #45536b;
+    --text-faint: #5b6b84;
+    --primary: #047857;
+    --primary-bright: #34d399;
+    --primary-deep: #10b981;
+    --on-primary: #052b1e;
+    --secondary: #0e7490;
+    --secondary-bright: #22d3ee;
+    --tertiary: #b45309;
+    --tertiary-bright: #fbbf24;
+    --on-tertiary: #3a2708;
+    --danger: #b42318;
+    --danger-bright: #f97066;
+    --tag-fill: rgba(15,23,42,0.04);
+    --header-bg: rgba(247,249,252,0.78);
+    --radius-sm: 10px;
+    --radius: 16px;
+    --radius-chip: 6px;
+    --radius-tile: 12px;
+    --radius-full: 999px;
+    --font-sans: "Inter","Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono: "JetBrains Mono","Fira Code",ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0b1220;
+      --bg-deep: #080e1a;
+      --surface: rgba(232,238,250,0.05);
+      --surface-2: rgba(232,238,250,0.085);
+      --border: rgba(232,238,250,0.12);
+      --border-strong: rgba(232,238,250,0.22);
+      --text: #e8eefa;
+      --text-dim: #93a4bf;
+      --text-faint: #6b7d99;
+      --tag-fill: rgba(232,238,250,0.045);
+      --header-bg: rgba(11,18,32,0.78);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0b1220;
+    --bg-deep: #080e1a;
+    --surface: rgba(232,238,250,0.05);
+    --surface-2: rgba(232,238,250,0.085);
+    --border: rgba(232,238,250,0.12);
+    --border-strong: rgba(232,238,250,0.22);
+    --text: #e8eefa;
+    --text-dim: #93a4bf;
+    --text-faint: #6b7d99;
+    --tag-fill: rgba(232,238,250,0.045);
+    --header-bg: rgba(11,18,32,0.78);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: clamp(1.15rem, 4vw, 2.5rem); }
+
+  a { color: var(--primary); }
+  ::selection { background: rgba(52,211,153,0.28); }
+
+  /* ---------- header ---------- */
+  header.top {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+    background: var(--header-bg);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .top-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; padding-block: 0.85rem;
+    max-width: 1180px; margin: 0 auto; padding-inline: clamp(1.15rem, 4vw, 2.5rem);
+  }
+  .brand { display: flex; align-items: center; gap: 0.65rem; }
+  .brand-mark {
+    width: 2.1rem; height: 2.1rem; border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--primary-bright) 0%, var(--secondary-bright) 100%);
+    color: var(--on-primary); font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+  .brand-text b { font-size: 0.92rem; font-weight: 700; }
+  .brand-text span { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; color: var(--text-faint); }
+  nav.jump { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  nav.jump a {
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.02em;
+    color: var(--text-dim); text-decoration: none;
+    padding: 0.5rem 0.7rem; border-radius: var(--radius-sm);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  nav.jump a:hover { background: var(--surface-2); color: var(--text); }
+  nav.jump a b { color: var(--primary); font-weight: 600; }
+  @media (max-width: 760px) { nav.jump span.label { display: none; } }
+
+  /* ---------- hero ---------- */
+  .hero { padding-block: clamp(2.6rem, 6vw, 4.2rem) clamp(1.8rem, 4vw, 2.6rem); }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    color: var(--primary); font-family: var(--font-mono); font-size: 0.78rem;
+    font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 1rem;
+  }
+  .eyebrow::before { content: ""; width: 1.4rem; height: 1px; background: var(--primary); display: inline-block; }
+  h1.display {
+    font-size: clamp(2.1rem, 1.2rem + 3.6vw, 3.4rem); font-weight: 700; letter-spacing: -0.03em;
+    line-height: 1.1; margin: 0 0 1.1rem; max-width: 30ch;
+  }
+  h1.display em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  p.lead { color: var(--text-dim); font-size: clamp(1.02rem, 1rem + 0.3vw, 1.18rem); max-width: 62ch; margin: 0 0 1.6rem; }
+  .repo-chip {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-full);
+    padding: 0.5rem 1rem 0.5rem 0.7rem; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim);
+  }
+  .repo-chip .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--primary-bright); box-shadow: 0 0 0 3px rgba(52,211,153,0.16); }
+
+  /* ---------- section shell ---------- */
+  section.diagram { padding-block: clamp(2.4rem, 5vw, 3.6rem); scroll-margin-top: 5.5rem; }
+  section.diagram + section.diagram { border-top: 1px solid var(--border); }
+  .sec-head { max-width: 46rem; margin-bottom: 1.7rem; }
+  .sec-kicker {
+    font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em;
+    color: var(--secondary); text-transform: uppercase; margin: 0 0 0.5rem;
+  }
+  h2.headline { font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.1rem); font-weight: 700; letter-spacing: -0.02em; margin: 0 0 0.7rem; text-wrap: balance; }
+  p.sec-sub { color: var(--text-dim); margin: 0; }
+  p.sec-sub code { font-family: var(--font-mono); font-size: 0.88em; background: var(--surface-2); padding: 0.12em 0.4em; border-radius: 5px; }
+
+  /* ---------- the terminal-styled diagram panel: the one deliberate dark exception ---------- */
+  .panel {
+    background: linear-gradient(180deg, rgba(19,29,51,0.97) 0%, rgba(12,20,37,0.97) 100%);
+    border-radius: var(--radius);
+    box-shadow: 0 30px 70px -24px rgba(8,12,24,0.55);
+    overflow: hidden;
+  }
+  .panel-bar {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.85rem 1.1rem; border-bottom: 1px solid rgba(232,238,250,0.08);
+  }
+  .panel-bar .tl { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: rgba(232,238,250,0.16); }
+  .panel-bar .label {
+    margin-left: 0.4rem; font-family: var(--font-mono); font-size: 0.7rem; color: #6b7d99; letter-spacing: 0.04em;
+  }
+  .panel-body { padding: clamp(0.6rem, 2vw, 1.4rem); overflow-x: auto; }
+  .panel-body svg { display: block; width: 100%; height: auto; min-width: 640px; }
+
+  /* legend chips under each panel */
+  .legend { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; }
+  .tag {
+    background: var(--tag-fill); color: var(--text-dim); border: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 0.71rem; border-radius: var(--radius-chip);
+    padding: 0.32rem 0.62rem; display: inline-flex; align-items: center; gap: 0.4rem;
+  }
+  .tag .sw { width: 0.55rem; height: 0.55rem; border-radius: 2px; flex-shrink: 0; }
+  .tag.amber .sw { background: var(--tertiary-bright); }
+  .tag.emerald .sw { background: var(--primary-bright); }
+  .tag.cyan .sw { background: var(--secondary-bright); }
+  .tag.rose .sw { background: var(--danger-bright); }
+  .tag.grey .sw { background: #6b7d99; }
+
+  .grounded {
+    margin-top: 1rem; font-size: 0.85rem; color: var(--text-faint);
+  }
+  .grounded code { font-family: var(--font-mono); font-size: 0.86em; color: var(--text-dim); }
+
+  /* metric callout reused for the honesty note */
+  .note {
+    background: rgba(52,211,153,0.07); border-radius: var(--radius-sm);
+    padding: 0.95rem 1.1rem; margin-top: 1.3rem; font-size: 0.92rem; color: var(--text);
+    display: flex; gap: 0.7rem; align-items: flex-start;
+  }
+  .note b { color: var(--primary); }
+
+  footer {
+    border-top: 1px solid var(--border); padding-block: 2.4rem 3rem; margin-top: 1rem;
+  }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; align-items: center; }
+  footer p { margin: 0; color: var(--text-faint); font-size: 0.85rem; }
+  footer .fmono { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim); }
+
+  svg text { font-family: var(--font-mono); }
+  svg .lbl { fill: #e8eefa; font-size: 13px; }
+  svg .lbl-b { fill: #e8eefa; font-size: 13px; font-weight: 700; }
+  svg .lbl-dim { fill: #93a4bf; font-size: 11.5px; }
+  svg .lbl-faint { fill: #6b7d99; font-size: 10.5px; }
+  svg .cap { fill: #93a4bf; font-size: 10px; letter-spacing: 0.08em; }
+</style>
+
+<a class="skip-link" href="#boundary" style="position:absolute; left:-9999px; background:var(--primary-bright); color:var(--on-primary); padding:0.75rem 1.25rem; border-radius:8px; z-index:100;" onfocus="this.style.left='1rem'; this.style.top='1rem';" onblur="this.style.left='-9999px';">Skip to diagrams</a>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <div class="brand-mark">SC</div>
+      <div class="brand-text"><b>Copilot Blueprint</b><span>SAAS_COPILOT · ARCHITECTURE REFERENCE</span></div>
+    </div>
+    <nav class="jump" aria-label="Diagram sections">
+      <a href="#boundary"><b>01</b> <span class="label">Boundary</span></a>
+      <a href="#sequence"><b>02</b> <span class="label">Sequence</span></a>
+      <a href="#rag"><b>03</b> <span class="label">RAG</span></a>
+      <a href="#decisions"><b>04</b> <span class="label">Decisions</span></a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow">Four diagrams, one running system</p>
+    <h1 class="display">How <em>saas_copilot</em> actually moves a question through itself</h1>
+    <p class="lead">A companion reference for the 19-episode course build — not illustrative sketches, but a direct read of what <code style="font-family:var(--font-mono); background:var(--surface-2); padding:0.12em 0.4em; border-radius:5px;">src/saas_copilot</code> does today: one conceptual map of the system's boundaries, one timed sequence of a real request, one pass through the retrieval pipeline, and one flowchart of the agent's own decision logic.</p>
+    <span class="repo-chip"><span class="dot"></span> github.com/scheffershen/saas-support-copilot</span>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 01 — CONCEPTUAL: SYSTEM BOUNDARY / BLOCK DIAGRAM -->
+  <!-- ============================================================ -->
+  <section class="diagram" id="boundary">
+    <div class="sec-head">
+      <p class="sec-kicker">01 · Conceptual</p>
+      <h2 class="headline">System boundary — where a question goes, and who's allowed to touch what</h2>
+      <p class="sec-sub">One FastAPI process, five internal layers, and three kinds of things outside it: a caller, a set of local read-only data sources, and exactly one thing reachable over the open network. Everything the tool registry touches is read-only by construction — there is no write path out of this box.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="label">block-diagram · system-boundary.svg</span></div>
+      <div class="panel-body">
+        <svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#93a4bf"/>
+            </marker>
+            <marker id="arrowRead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+            </marker>
+          </defs>
+
+          <!-- Client -->
+          <rect x="400" y="16" width="200" height="52" rx="26" fill="none" stroke="#e8eefa" stroke-width="1.5"/>
+          <text x="500" y="38" text-anchor="middle" class="lbl-b">Client</text>
+          <text x="500" y="55" text-anchor="middle" class="lbl-faint">curl · browser · course viewer</text>
+
+          <line x1="500" y1="68" x2="500" y2="108" stroke="#93a4bf" stroke-width="1.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+          <text x="514" y="92" class="lbl-faint">HTTPS · JSON</text>
+
+          <!-- Service boundary -->
+          <rect x="50" y="112" width="900" height="368" rx="14" fill="none" stroke="#34d399" stroke-width="1.5" stroke-dasharray="3 5"/>
+          <text x="70" y="136" class="cap" fill="#34d399">COPILOT SERVICE — one FastAPI process (api/main.py, lifespan-built once)</text>
+
+          <!-- API surface -->
+          <rect x="78" y="150" width="844" height="46" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="500" y="170" text-anchor="middle" class="lbl-b">/ask  /health  /ingest  /evaluations</text>
+          <text x="500" y="187" text-anchor="middle" class="lbl-faint">request-id middleware · role/registry/llm/store dependency injection</text>
+
+          <line x1="500" y1="196" x2="500" y2="216" stroke="#93a4bf" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+          <!-- row: session memory | safety gates -->
+          <rect x="78" y="220" width="400" height="60" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="278" y="244" text-anchor="middle" class="lbl-b">Session Memory</text>
+          <text x="278" y="262" text-anchor="middle" class="lbl-faint">InMemorySessionStore · Turn history · retention window</text>
+
+          <rect x="522" y="220" width="400" height="60" rx="9" fill="rgba(251,191,36,0.07)" stroke="#fbbf24"/>
+          <text x="722" y="244" text-anchor="middle" class="lbl-b" fill="#fbbf24">Safety gates</text>
+          <text x="722" y="262" text-anchor="middle" class="lbl-faint" font-size="10">intent regex · RBAC filter · injection scan + redact</text>
+
+          <line x1="278" y1="280" x2="278" y2="300" stroke="#93a4bf" stroke-width="1.5"/>
+          <line x1="722" y1="280" x2="722" y2="300" stroke="#93a4bf" stroke-width="1.5"/>
+          <line x1="278" y1="300" x2="722" y2="300" stroke="#93a4bf" stroke-width="1.5"/>
+          <line x1="500" y1="300" x2="500" y2="316" stroke="#93a4bf" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+          <!-- Agent core -->
+          <rect x="78" y="320" width="844" height="60" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="500" y="344" text-anchor="middle" class="lbl-b">Agent core</text>
+          <text x="500" y="362" text-anchor="middle" class="lbl-faint">router → specialist · reactive loop (usage/bug/general) or plan-first workflow (feature)</text>
+
+          <line x1="500" y1="380" x2="500" y2="400" stroke="#93a4bf" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+          <!-- Tool registry -->
+          <rect x="78" y="404" width="844" height="64" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="500" y="426" text-anchor="middle" class="lbl-b">Tool registry</text>
+          <text x="500" y="444" text-anchor="middle" class="lbl-faint">9 read-only tools · role + root bound via functools.partial, never LLM-suppliable</text>
+          <text x="500" y="461" text-anchor="middle" class="lbl-faint" font-size="10">search_docs · read_source · search_code · list_files · git_log · git_show · query_graph · read_logs · query_database</text>
+
+          <!-- fan down to data sources -->
+          <line x1="220" y1="480" x2="220" y2="516" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowRead)"/>
+          <line x1="380" y1="480" x2="380" y2="516" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowRead)"/>
+          <line x1="540" y1="480" x2="540" y2="516" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowRead)"/>
+          <line x1="700" y1="480" x2="700" y2="516" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowRead)"/>
+          <text x="960" y="504" text-anchor="end" class="lbl-faint" fill="#22d3ee">read-only</text>
+
+          <!-- local data boundary -->
+          <rect x="50" y="522" width="740" height="150" rx="14" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="3 5"/>
+          <text x="70" y="546" class="cap" fill="#22d3ee">LOCAL DATA — filesystem + subprocess, never written to</text>
+
+          <rect x="80" y="558" width="160" height="94" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="160" y="584" text-anchor="middle" class="lbl-b" font-size="12">Docs</text>
+          <text x="160" y="602" text-anchor="middle" class="lbl-faint">sample_app/loopline</text>
+          <text x="160" y="616" text-anchor="middle" class="lbl-faint">/docs/*.md</text>
+
+          <rect x="260" y="558" width="160" height="94" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="340" y="584" text-anchor="middle" class="lbl-b" font-size="12">Source + Git</text>
+          <text x="340" y="602" text-anchor="middle" class="lbl-faint">app/*.py · call graph</text>
+          <text x="340" y="616" text-anchor="middle" class="lbl-faint">git log / git show</text>
+
+          <rect x="440" y="558" width="160" height="94" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="520" y="584" text-anchor="middle" class="lbl-b" font-size="12">Database</text>
+          <text x="520" y="602" text-anchor="middle" class="lbl-faint">SQLite, or MySQL</text>
+          <text x="520" y="616" text-anchor="middle" class="lbl-faint">in-process / via MCP</text>
+
+          <rect x="620" y="558" width="150" height="94" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="695" y="584" text-anchor="middle" class="lbl-b" font-size="12">Logs</text>
+          <text x="695" y="602" text-anchor="middle" class="lbl-faint">logs/app.log</text>
+          <text x="695" y="616" text-anchor="middle" class="lbl-faint">tail + grep only</text>
+
+          <!-- external network -->
+          <rect x="820" y="522" width="130" height="150" rx="14" fill="none" stroke="#e8eefa" stroke-width="1.5" stroke-dasharray="3 5"/>
+          <text x="885" y="546" text-anchor="middle" class="cap">NETWORK</text>
+          <rect x="836" y="562" width="98" height="86" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="885" y="592" text-anchor="middle" class="lbl-b" font-size="12">LLM</text>
+          <text x="885" y="608" text-anchor="middle" class="lbl-b" font-size="12">provider</text>
+          <text x="885" y="628" text-anchor="middle" class="lbl-faint">OpenAI-</text>
+          <text x="885" y="640" text-anchor="middle" class="lbl-faint">compatible</text>
+
+          <path d="M780,350 C820,350 850,420 885,518" fill="none" stroke="#e8eefa" stroke-width="1.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+          <text x="800" y="468" class="lbl-faint">completions</text>
+        </svg>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="tag emerald"><span class="sw"></span>service boundary</span>
+      <span class="tag amber"><span class="sw"></span>safety gate</span>
+      <span class="tag cyan"><span class="sw"></span>read-only data path</span>
+      <span class="tag grey"><span class="sw"></span>internal layer</span>
+    </div>
+    <p class="grounded">Grounded in <code>api/main.py</code>, <code>tools/__init__.py</code>, <code>security/</code>. The copilot never calls Loopline's own HTTP API — it reads its docs, source, git history, and database directly, the same access pattern a read-only analyst would have.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 02 — DYNAMIC: REQUEST-RESPONSE SEQUENCE DIAGRAM -->
+  <!-- ============================================================ -->
+  <section class="diagram" id="sequence">
+    <div class="sec-head">
+      <p class="sec-kicker">02 · Dynamic</p>
+      <h2 class="headline">One request, timed — a bug question, start to finish</h2>
+      <p class="sec-sub">The middleware wraps the entire call, not just the handler — it assigns a request ID before routing even happens and echoes it on the way out whether the response is a 200 or an error. The reactive loop's second LLM call only happens after a real tool round-trip returns.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="label">sequence-diagram · ask-bug-question.svg</span></div>
+      <div class="panel-body">
+        <svg viewBox="0 0 1060 900" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#e8eefa"/>
+            </marker>
+          </defs>
+          <!-- lifelines -->
+          <g>
+            <!-- headers -->
+            <g font-size="12">
+              <rect x="20" y="10" width="120" height="34" rx="7" fill="rgba(232,238,250,0.08)"/>
+              <text x="80" y="31" text-anchor="middle" class="lbl-b">Client</text>
+
+              <rect x="182" y="10" width="120" height="34" rx="7" fill="rgba(232,238,250,0.08)"/>
+              <text x="242" y="31" text-anchor="middle" class="lbl-b">Middleware</text>
+
+              <rect x="344" y="10" width="120" height="34" rx="7" fill="rgba(232,238,250,0.08)"/>
+              <text x="404" y="26" text-anchor="middle" class="lbl-b">Route</text>
+              <text x="404" y="39" text-anchor="middle" class="lbl-faint" font-size="9">ask()</text>
+
+              <rect x="506" y="10" width="130" height="34" rx="7" fill="rgba(52,211,153,0.1)" stroke="#34d399"/>
+              <text x="571" y="26" text-anchor="middle" class="lbl-b" fill="#34d399">Agent loop</text>
+              <text x="571" y="39" text-anchor="middle" class="lbl-faint" font-size="9">run_agent()</text>
+
+              <rect x="678" y="10" width="120" height="34" rx="7" fill="rgba(34,211,238,0.1)" stroke="#22d3ee"/>
+              <text x="738" y="31" text-anchor="middle" class="lbl-b" fill="#22d3ee">Tool registry</text>
+
+              <rect x="840" y="10" width="120" height="34" rx="7" fill="rgba(251,191,36,0.08)" stroke="#fbbf24"/>
+              <text x="900" y="31" text-anchor="middle" class="lbl-b" fill="#fbbf24">LLM provider</text>
+            </g>
+            <!-- lifelines verticals -->
+            <line x1="80" y1="44" x2="80" y2="860" stroke="rgba(232,238,250,0.18)"/>
+            <line x1="242" y1="44" x2="242" y2="860" stroke="rgba(232,238,250,0.18)"/>
+            <line x1="404" y1="44" x2="404" y2="860" stroke="rgba(232,238,250,0.18)"/>
+            <line x1="571" y1="44" x2="571" y2="860" stroke="rgba(232,238,250,0.18)"/>
+            <line x1="738" y1="44" x2="738" y2="860" stroke="rgba(232,238,250,0.18)"/>
+            <line x1="900" y1="44" x2="900" y2="860" stroke="rgba(232,238,250,0.18)"/>
+          </g>
+
+          <!-- messages -->
+          <g font-size="11.5">
+            <line x1="80" y1="70" x2="242" y2="70" stroke="#e8eefa" marker-end="url(#arr2)"/>
+            <text x="86" y="64" class="lbl">POST /ask {session_id, question}</text>
+
+            <rect x="222" y="82" width="40" height="26" rx="5" fill="rgba(232,238,250,0.08)"/>
+            <text x="242" y="99" text-anchor="middle" class="lbl-faint" font-size="9">assign</text>
+            <text x="290" y="99" class="lbl-faint">X-Request-ID: caller's own, or a fresh uuid4</text>
+
+            <line x1="242" y1="122" x2="404" y2="122" stroke="#e8eefa" marker-end="url(#arr2)"/>
+            <text x="248" y="116" class="lbl">call_next(request)</text>
+
+            <line x1="404" y1="148" x2="571" y2="148" stroke="#34d399" marker-end="url(#arr2)"/>
+            <text x="410" y="142" class="lbl">asyncio.to_thread(ask, history, question)</text>
+
+            <rect x="551" y="160" width="40" height="26" rx="5" fill="rgba(232,238,250,0.08)"/>
+            <text x="571" y="177" text-anchor="middle" class="lbl-faint" font-size="9">check</text>
+            <text x="620" y="177" class="lbl-faint">detect_destructive_intent() → no match, regex only</text>
+
+            <line x1="571" y1="200" x2="900" y2="200" stroke="#fbbf24" marker-end="url(#arr2)"/>
+            <text x="577" y="194" class="lbl">classify(question, history)</text>
+            <line x1="900" y1="228" x2="571" y2="228" stroke="#93a4bf" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+            <text x="700" y="222" text-anchor="middle" class="lbl-dim">RouteDecision{domain: "bug"}</text>
+
+            <line x1="571" y1="252" x2="900" y2="252" stroke="#fbbf24" marker-end="url(#arr2)"/>
+            <text x="577" y="246" class="lbl">AgentStep — step 1</text>
+            <line x1="900" y1="280" x2="571" y2="280" stroke="#93a4bf" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+            <text x="700" y="274" text-anchor="middle" class="lbl-dim">{action: call_tool, tool: read_logs}</text>
+
+            <line x1="571" y1="306" x2="738" y2="306" stroke="#22d3ee" marker-end="url(#arr2)"/>
+            <text x="577" y="300" class="lbl">registry.call("read_logs", …)</text>
+
+            <rect x="718" y="318" width="40" height="26" rx="5" fill="rgba(232,238,250,0.08)"/>
+            <text x="738" y="335" text-anchor="middle" class="lbl-faint" font-size="9">gate</text>
+            <text x="748" y="335" class="lbl-faint" font-size="10">validated · root-bound · timeout</text>
+
+            <line x1="738" y1="358" x2="571" y2="358" stroke="#93a4bf" marker-end="url(#arr2)"/>
+            <text x="600" y="352" class="lbl-dim">log lines matched</text>
+
+            <rect x="551" y="370" width="40" height="26" rx="5" fill="rgba(232,238,250,0.08)"/>
+            <text x="571" y="387" text-anchor="middle" class="lbl-faint" font-size="9">wrap</text>
+            <text x="620" y="387" class="lbl-faint" font-size="10">format_tool_result() — wrap, redact, scan</text>
+
+            <line x1="571" y1="410" x2="900" y2="410" stroke="#fbbf24" marker-end="url(#arr2)"/>
+            <text x="577" y="404" class="lbl">AgentStep — step 2, + tool observation</text>
+            <line x1="900" y1="438" x2="571" y2="438" stroke="#93a4bf" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+            <text x="700" y="432" text-anchor="middle" class="lbl-dim">{action: final_answer, answer: {…}}</text>
+
+            <rect x="551" y="450" width="40" height="26" rx="5" fill="rgba(52,211,153,0.12)" stroke="#34d399"/>
+            <text x="571" y="467" text-anchor="middle" class="lbl-faint" font-size="9" fill="#34d399">gate</text>
+            <text x="620" y="467" class="lbl-faint">required_evidence_tools ∩ tools_called ≠ ∅ → pass</text>
+
+            <rect x="551" y="480" width="40" height="26" rx="5" fill="rgba(232,238,250,0.08)"/>
+            <text x="571" y="497" text-anchor="middle" class="lbl-faint" font-size="9">redact</text>
+            <text x="620" y="497" class="lbl-faint" font-size="10">redact_answer() — for secrets the caller typed directly</text>
+
+            <line x1="571" y1="522" x2="404" y2="522" stroke="#34d399" marker-end="url(#arr2)"/>
+            <text x="410" y="516" class="lbl">AgentRunResult</text>
+
+            <rect x="384" y="534" width="40" height="26" rx="5" fill="rgba(232,238,250,0.08)"/>
+            <text x="404" y="551" text-anchor="middle" class="lbl-faint" font-size="9">save</text>
+            <text x="450" y="551" class="lbl-faint">session_store.save(turn) · log_run() — no question/answer text</text>
+
+            <line x1="404" y1="580" x2="242" y2="580" stroke="#e8eefa" marker-end="url(#arr2)"/>
+            <text x="248" y="574" class="lbl">AskResponse (serialize)</text>
+
+            <line x1="242" y1="606" x2="80" y2="606" stroke="#e8eefa" marker-end="url(#arr2)"/>
+            <text x="86" y="600" class="lbl">200 OK + X-Request-ID header</text>
+          </g>
+
+          <!-- alt / error path -->
+          <rect x="60" y="640" width="900" height="200" rx="10" fill="none" stroke="rgba(232,238,250,0.16)" stroke-dasharray="2 4"/>
+          <rect x="60" y="640" width="120" height="24" rx="0" fill="rgba(232,238,250,0.1)"/>
+          <text x="70" y="657" class="lbl-faint" font-size="10">alt · anything raises</text>
+          <g font-size="11">
+            <text x="80" y="686" class="lbl-dim">UnknownRoleError</text><text x="260" y="686" class="lbl-faint">→ 400, before ask() is ever called</text>
+            <text x="80" y="712" class="lbl-dim">MissingEvidenceError / MaxStepsExceededError / RepeatedToolCallError</text><text x="700" y="712" class="lbl-faint">→ 422</text>
+            <text x="80" y="738" class="lbl-dim">LLMTimeoutError</text><text x="260" y="738" class="lbl-faint">→ 504 (checked before the broader LLMError)</text>
+            <text x="80" y="764" class="lbl-dim">LLMError</text><text x="260" y="764" class="lbl-faint">→ 502</text>
+            <text x="80" y="790" class="lbl-dim">MalformedOutputError</text><text x="260" y="790" class="lbl-faint">→ 502 — valid response, invalid contract</text>
+            <text x="80" y="820" class="lbl-faint" font-size="10">every branch still gets the request-id header — the middleware wraps error responses too</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="tag emerald"><span class="sw"></span>agent-loop call</span>
+      <span class="tag amber"><span class="sw"></span>LLM round trip</span>
+      <span class="tag cyan"><span class="sw"></span>tool round trip</span>
+      <span class="tag grey"><span class="sw"></span>internal step, no network</span>
+    </div>
+    <p class="grounded">Grounded in <code>api/main.py</code>'s <code>add_request_id</code> middleware and exception handlers, <code>memory/orchestration.py::ask()</code>, and <code>agent.py::_run_reactive_loop</code>. A usage question that never calls a tool collapses to one LLM round trip instead of two; a destructive command skips the LLM entirely.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 03 — KNOWLEDGE: RAG PIPELINE DIAGRAM -->
+  <!-- ============================================================ -->
+  <section class="diagram" id="rag">
+    <div class="sec-head">
+      <p class="sec-kicker">03 · Knowledge</p>
+      <h2 class="headline">Retrieval — from raw Markdown to a cited context block</h2>
+      <p class="sec-sub">Indexing happens once, at startup or <code>/ingest</code>. Access control is enforced <em>before</em> ranking, not after — an ineligible chunk is never scored, never almost-returned. Two independent rankings (keyword and vector) are fused, not blended by a single score.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="label">pipeline-diagram · rag-retrieval.svg</span></div>
+      <div class="panel-body">
+        <svg viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#93a4bf"/>
+            </marker>
+          </defs>
+
+          <text x="24" y="28" class="cap" fill="#93a4bf">INDEX BUILD — once, at startup or POST /ingest</text>
+          <rect x="20" y="40" width="146" height="66" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="93" y="66" text-anchor="middle" class="lbl-b" font-size="12">load_docs()</text>
+          <text x="93" y="84" text-anchor="middle" class="lbl-faint">docs/*.md → Document</text>
+
+          <line x1="166" y1="73" x2="200" y2="73" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <rect x="200" y="40" width="150" height="66" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="275" y="66" text-anchor="middle" class="lbl-b" font-size="12">normalize_text()</text>
+          <text x="275" y="84" text-anchor="middle" class="lbl-faint">whitespace, case</text>
+
+          <line x1="350" y1="73" x2="384" y2="73" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <rect x="384" y="40" width="150" height="66" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="459" y="66" text-anchor="middle" class="lbl-b" font-size="12">chunk_text()</text>
+          <text x="459" y="84" text-anchor="middle" class="lbl-faint">Document per chunk_id</text>
+
+          <line x1="534" y1="73" x2="568" y2="73" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <g>
+            <rect x="568" y="30" width="176" height="40" rx="8" fill="rgba(34,211,238,0.08)" stroke="#22d3ee"/>
+            <text x="656" y="54" text-anchor="middle" class="lbl" fill="#22d3ee" font-size="11">BM25Index(chunks)</text>
+            <rect x="568" y="76" width="176" height="40" rx="8" fill="rgba(52,211,153,0.08)" stroke="#34d399"/>
+            <text x="656" y="100" text-anchor="middle" class="lbl" fill="#34d399" font-size="11">embedder.embed(chunk)</text>
+          </g>
+          <line x1="744" y1="73" x2="778" y2="73" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <rect x="778" y="40" width="190" height="66" rx="9" fill="rgba(232,238,250,0.06)" stroke="#e8eefa"/>
+          <text x="873" y="66" text-anchor="middle" class="lbl-b" font-size="12">DocumentIndex</text>
+          <text x="873" y="84" text-anchor="middle" class="lbl-faint">chunks + bm25 + embeddings</text>
+
+          <line x1="93" y1="106" x2="93" y2="150" stroke="rgba(232,238,250,0.25)" stroke-dasharray="2 4"/>
+          <line x1="93" y1="150" x2="960" y2="150" stroke="rgba(232,238,250,0.25)" stroke-dasharray="2 4"/>
+
+          <text x="24" y="184" class="cap" fill="#93a4bf">QUERY TIME — every search_docs() call</text>
+
+          <rect x="20" y="196" width="150" height="60" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="95" y="220" text-anchor="middle" class="lbl-b" font-size="12">query + role</text>
+          <text x="95" y="238" text-anchor="middle" class="lbl-faint">from the tool call</text>
+
+          <line x1="170" y1="226" x2="204" y2="226" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <rect x="204" y="196" width="176" height="60" rx="9" fill="rgba(251,191,36,0.09)" stroke="#fbbf24"/>
+          <text x="292" y="220" text-anchor="middle" class="lbl-b" font-size="12" fill="#fbbf24">eligible_indices()</text>
+          <text x="292" y="238" text-anchor="middle" class="lbl-faint">is_visible_to(path, role) — the RBAC gate</text>
+
+          <line x1="380" y1="212" x2="414" y2="180" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <line x1="380" y1="240" x2="414" y2="272" stroke="#93a4bf" marker-end="url(#arr3)"/>
+
+          <rect x="414" y="150" width="180" height="60" rx="9" fill="rgba(34,211,238,0.08)" stroke="#22d3ee"/>
+          <text x="504" y="174" text-anchor="middle" class="lbl-b" font-size="12" fill="#22d3ee">BM25 search</text>
+          <text x="504" y="192" text-anchor="middle" class="lbl-faint" font-size="10">keyword overlap</text>
+
+          <rect x="414" y="242" width="180" height="60" rx="9" fill="rgba(52,211,153,0.08)" stroke="#34d399"/>
+          <text x="504" y="266" text-anchor="middle" class="lbl-b" font-size="12" fill="#34d399">Semantic search</text>
+          <text x="504" y="284" text-anchor="middle" class="lbl-faint" font-size="10">cosine ≥ 0.05 floor</text>
+
+          <line x1="594" y1="180" x2="628" y2="212" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <line x1="594" y1="272" x2="628" y2="240" stroke="#93a4bf" marker-end="url(#arr3)"/>
+
+          <rect x="628" y="196" width="176" height="60" rx="9" fill="rgba(232,238,250,0.06)" stroke="#e8eefa"/>
+          <text x="716" y="220" text-anchor="middle" class="lbl-b" font-size="12">Reciprocal rank fusion</text>
+          <text x="716" y="238" text-anchor="middle" class="lbl-faint">merges both rankings</text>
+
+          <line x1="804" y1="226" x2="838" y2="226" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <rect x="838" y="196" width="140" height="60" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="908" y="220" text-anchor="middle" class="lbl-b" font-size="12">top-K Documents</text>
+          <text x="908" y="238" text-anchor="middle" class="lbl-faint">path#chunk-N citation</text>
+
+          <line x1="908" y1="256" x2="908" y2="330" stroke="#93a4bf" stroke-dasharray="2 4"/>
+          <line x1="908" y1="330" x2="292" y2="330" stroke="#93a4bf" stroke-dasharray="2 4" marker-end="url(#arr3)"/>
+
+          <rect x="204" y="340" width="380" height="60" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="394" y="364" text-anchor="middle" class="lbl-b" font-size="12">format_tool_result()</text>
+          <text x="394" y="382" text-anchor="middle" class="lbl-faint">DATA_HEADER wrap · secret redaction · injection flag</text>
+
+          <line x1="584" y1="370" x2="618" y2="370" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <rect x="618" y="340" width="360" height="60" rx="9" fill="rgba(251,191,36,0.08)" stroke="#fbbf24"/>
+          <text x="798" y="364" text-anchor="middle" class="lbl-b" font-size="12" fill="#fbbf24">injected into the LLM's message list</text>
+          <text x="798" y="382" text-anchor="middle" class="lbl-faint" font-size="10">labeled as data, never as an instruction</text>
+
+          <line x1="798" y1="400" x2="798" y2="440" stroke="#93a4bf" marker-end="url(#arr3)"/>
+          <rect x="618" y="446" width="360" height="54" rx="9" fill="rgba(52,211,153,0.09)" stroke="#34d399"/>
+          <text x="798" y="468" text-anchor="middle" class="lbl-b" font-size="12" fill="#34d399">cited final answer</text>
+          <text x="798" y="486" text-anchor="middle" class="lbl-faint">citations: ["docs/notifications.md#chunk-1", …]</text>
+        </svg>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="tag amber"><span class="sw"></span>RBAC gate</span>
+      <span class="tag cyan"><span class="sw"></span>BM25 / keyword</span>
+      <span class="tag emerald"><span class="sw"></span>embeddings / semantic</span>
+      <span class="tag grey"><span class="sw"></span>index-build step</span>
+    </div>
+    <p class="grounded">Grounded in <code>retrieval/index.py</code> (<code>DocumentIndex</code>, <code>eligible_indices</code>, <code>search_hybrid</code>), <code>retrieval/bm25.py</code>, <code>retrieval/rrf.py</code>, and <code>security/classification.py</code>. The 0.05 similarity floor exists because an unfiltered cosine ranking never returns nothing — it just reorders the whole corpus.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 04 — BEHAVIORAL: AGENT DECISION FLOWCHART -->
+  <!-- ============================================================ -->
+  <section class="diagram" id="decisions">
+    <div class="sec-head">
+      <p class="sec-kicker">04 · Behavioral</p>
+      <h2 class="headline">What the agent decides, step by step</h2>
+      <p class="sec-sub">Two gates run in code the model never touches, before routing even starts. Everything after that is either a bounded reactive loop with a repeated-call guard and a step ceiling, or a plan-first workflow with its own bounded revision budget — neither can loop forever, and neither can answer a gated domain without real evidence.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="label">flowchart · run_agent.svg</span></div>
+      <div class="panel-body">
+        <svg viewBox="0 0 1240 1180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#93a4bf"/>
+            </marker>
+          </defs>
+
+          <!-- start -->
+          <rect x="440" y="10" width="160" height="40" rx="20" fill="rgba(232,238,250,0.08)" stroke="#e8eefa"/>
+          <text x="520" y="35" text-anchor="middle" class="lbl-b" font-size="12">question arrives</text>
+          <line x1="520" y1="50" x2="520" y2="76" stroke="#93a4bf" marker-end="url(#arr4)"/>
+
+          <!-- diamond 1: destructive -->
+          <polygon points="520,76 630,124 520,172 410,124" fill="rgba(251,191,36,0.08)" stroke="#fbbf24"/>
+          <text x="520" y="120" text-anchor="middle" class="lbl" font-size="11">destructive</text>
+          <text x="520" y="134" text-anchor="middle" class="lbl" font-size="11">intent?</text>
+
+          <line x1="630" y1="124" x2="760" y2="124" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="670" y="116" class="lbl-faint">yes</text>
+          <rect x="760" y="100" width="220" height="50" rx="10" fill="rgba(180,35,24,0.14)" stroke="#f97066"/>
+          <text x="870" y="121" text-anchor="middle" class="lbl-b" font-size="11" fill="#f97066">refused — build_refusal_answer()</text>
+          <text x="870" y="138" text-anchor="middle" class="lbl-faint">0 LLM calls · escalates to a human</text>
+
+          <line x1="520" y1="172" x2="520" y2="198" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="530" y="190" class="lbl-faint">no</text>
+
+          <!-- diamond 2: confirmed followup -->
+          <polygon points="520,198 650,246 520,294 390,246" fill="rgba(232,238,250,0.05)" stroke="#93a4bf"/>
+          <text x="520" y="240" text-anchor="middle" class="lbl" font-size="11">"yes" reply to a</text>
+          <text x="520" y="254" text-anchor="middle" class="lbl" font-size="11">prior refusal?</text>
+
+          <line x1="650" y1="246" x2="740" y2="246" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="668" y="238" class="lbl-faint">yes</text>
+          <rect x="740" y="222" width="260" height="48" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="870" y="243" text-anchor="middle" class="lbl" font-size="11">reframe: "Explain how to do this,</text>
+          <text x="870" y="258" text-anchor="middle" class="lbl" font-size="11">without performing it: …"</text>
+          <line x1="870" y1="270" x2="870" y2="330" stroke="#93a4bf"/>
+          <line x1="870" y1="330" x2="520" y2="330" stroke="#93a4bf" marker-end="url(#arr4)"/>
+
+          <line x1="520" y1="294" x2="520" y2="330" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="530" y="316" class="lbl-faint">no</text>
+
+          <!-- classify -->
+          <rect x="420" y="336" width="200" height="46" rx="9" fill="rgba(251,191,36,0.08)" stroke="#fbbf24"/>
+          <text x="520" y="364" text-anchor="middle" class="lbl-b" font-size="11" fill="#fbbf24">classify() — 1 LLM call</text>
+          <line x1="520" y1="382" x2="520" y2="408" stroke="#93a4bf" marker-end="url(#arr4)"/>
+
+          <!-- diamond 3: domain -->
+          <polygon points="520,408 630,452 520,496 410,452" fill="rgba(232,238,250,0.05)" stroke="#93a4bf"/>
+          <text x="520" y="456" text-anchor="middle" class="lbl" font-size="11">domain?</text>
+
+          <!-- left branch: feature -->
+          <line x1="410" y1="452" x2="270" y2="452" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="340" y="444" class="lbl-faint">feature</text>
+
+          <rect x="60" y="416" width="220" height="72" rx="10" fill="rgba(34,211,238,0.06)" stroke="#22d3ee"/>
+          <text x="170" y="438" text-anchor="middle" class="lbl-b" font-size="11" fill="#22d3ee">plan-first workflow</text>
+          <text x="170" y="454" text-anchor="middle" class="lbl-faint">plan (topo-sorted) → execute</text>
+          <text x="170" y="468" text-anchor="middle" class="lbl-faint">steps → evidence gate → draft</text>
+          <text x="170" y="482" text-anchor="middle" class="lbl-faint">→ evaluate → revise (bounded)</text>
+
+          <line x1="170" y1="488" x2="170" y2="920" stroke="#22d3ee"/>
+
+          <!-- right branch: reactive -->
+          <line x1="630" y1="452" x2="770" y2="452" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="690" y="444" class="lbl-faint">usage / bug / general</text>
+
+          <rect x="770" y="416" width="230" height="46" rx="9" fill="rgba(52,211,153,0.08)" stroke="#34d399"/>
+          <text x="885" y="444" text-anchor="middle" class="lbl-b" font-size="11" fill="#34d399">complete_structured(AgentStep)</text>
+          <line x1="885" y1="462" x2="885" y2="488" stroke="#93a4bf" marker-end="url(#arr4)"/>
+
+          <polygon points="885,488 985,524 885,560 785,524" fill="rgba(232,238,250,0.05)" stroke="#93a4bf"/>
+          <text x="885" y="520" text-anchor="middle" class="lbl" font-size="10.5">action?</text>
+
+          <!-- call_tool branch: left, into its own loop-body column, clear of the evidence-gate spine below -->
+          <line x1="785" y1="524" x2="470" y2="524" stroke="#93a4bf"/>
+          <line x1="470" y1="524" x2="470" y2="600" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="700" y="516" class="lbl-faint" font-size="10">call_tool</text>
+          <text x="560" y="540" class="lbl-faint" font-size="9">guard: repeated (tool,args)?</text>
+          <text x="560" y="552" class="lbl-faint" font-size="9">→ RepeatedToolCallError</text>
+
+          <rect x="370" y="600" width="200" height="44" rx="9" fill="rgba(34,211,238,0.08)" stroke="#22d3ee"/>
+          <text x="470" y="618" text-anchor="middle" class="lbl-b" font-size="11" fill="#22d3ee">registry.call(tool)</text>
+          <text x="470" y="632" text-anchor="middle" class="lbl-faint" font-size="9">ToolError → observation text</text>
+
+          <line x1="470" y1="644" x2="470" y2="670" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <rect x="350" y="670" width="240" height="40" rx="9" fill="rgba(232,238,250,0.05)" stroke="rgba(232,238,250,0.14)"/>
+          <text x="470" y="694" text-anchor="middle" class="lbl" font-size="10.5">append observation · steps += 1</text>
+
+          <polygon points="470,710 540,732 470,754 400,732" fill="rgba(232,238,250,0.05)" stroke="#93a4bf"/>
+          <text x="470" y="729" text-anchor="middle" class="lbl" font-size="9.5">steps &lt;</text>
+          <text x="470" y="741" text-anchor="middle" class="lbl" font-size="9.5">max_steps?</text>
+
+          <!-- loop-back: far-left corridor (x=340, clear of the plan-first-workflow column at x≤280 -->
+          <!-- and of the domain/classify boxes at x410-630), re-entering above the domain diamond -->
+          <!-- through the one clear horizontal band at y=395 (between classify's y382 and domain's y408) -->
+          <line x1="400" y1="732" x2="340" y2="732" stroke="#93a4bf"/>
+          <line x1="340" y1="732" x2="340" y2="395" stroke="#93a4bf"/>
+          <line x1="340" y1="395" x2="885" y2="395" stroke="#93a4bf"/>
+          <line x1="885" y1="395" x2="885" y2="414" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="350" y="724" class="lbl-faint" font-size="9">yes → loop back</text>
+
+          <line x1="470" y1="754" x2="470" y2="780" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="480" y="772" class="lbl-faint" font-size="9">no</text>
+          <rect x="370" y="780" width="200" height="40" rx="9" fill="rgba(180,35,24,0.1)" stroke="#f97066"/>
+          <text x="470" y="805" text-anchor="middle" class="lbl-b" font-size="10.5" fill="#f97066">MaxStepsExceededError</text>
+
+          <!-- final_answer branch: straight down the central spine, never crosses the loop-body column -->
+          <line x1="885" y1="560" x2="885" y2="588" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="895" y="578" class="lbl-faint" font-size="9">final_answer</text>
+
+          <!-- evidence gate diamond -->
+          <polygon points="885,596 985,632 885,668 785,632" fill="rgba(251,191,36,0.08)" stroke="#fbbf24"/>
+          <text x="885" y="628" text-anchor="middle" class="lbl" font-size="10">specialist needs</text>
+          <text x="885" y="641" text-anchor="middle" class="lbl" font-size="10">evidence, got none?</text>
+
+          <line x1="985" y1="632" x2="1020" y2="632" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="990" y="622" class="lbl-faint" font-size="9">yes</text>
+          <rect x="1020" y="608" width="190" height="48" rx="9" fill="rgba(180,35,24,0.1)" stroke="#f97066"/>
+          <text x="1115" y="637" text-anchor="middle" class="lbl-b" font-size="10.5" fill="#f97066">MissingEvidenceError</text>
+
+          <line x1="885" y1="668" x2="885" y2="694" stroke="#93a4bf" marker-end="url(#arr4)"/>
+          <text x="895" y="686" class="lbl-faint" font-size="9">no</text>
+          <rect x="775" y="694" width="220" height="40" rx="9" fill="rgba(52,211,153,0.08)" stroke="#34d399"/>
+          <text x="885" y="719" text-anchor="middle" class="lbl-b" font-size="10.5" fill="#34d399">redact_answer()</text>
+
+          <line x1="885" y1="734" x2="885" y2="920" stroke="#34d399"/>
+
+          <!-- planning workflow success path meets here -->
+          <line x1="170" y1="920" x2="885" y2="920" stroke="#93a4bf" stroke-dasharray="2 4"/>
+          <line x1="527" y1="920" x2="527" y2="960" stroke="#93a4bf" marker-end="url(#arr4)"/>
+
+          <rect x="400" y="966" width="260" height="52" rx="26" fill="rgba(52,211,153,0.12)" stroke="#34d399" stroke-width="1.5"/>
+          <text x="530" y="988" text-anchor="middle" class="lbl-b" font-size="12" fill="#34d399">AgentRunResult</text>
+          <text x="530" y="1005" text-anchor="middle" class="lbl-faint">answer · domain · steps_taken · tools_called</text>
+
+          <!-- legend footnote inside svg for planning box -->
+          <text x="170" y="502" text-anchor="middle" class="lbl-faint" font-size="9">(no evidence in the plan →</text>
+          <text x="170" y="515" text-anchor="middle" class="lbl-faint" font-size="9">MissingEvidenceError, same gate)</text>
+        </svg>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="tag amber"><span class="sw"></span>gate / classify</span>
+      <span class="tag cyan"><span class="sw"></span>tool call</span>
+      <span class="tag emerald"><span class="sw"></span>success path</span>
+      <span class="tag rose"><span class="sw"></span>raised error, mapped to an HTTP status</span>
+    </div>
+    <p class="grounded">Grounded in <code>agent.py::run_agent</code> / <code>_run_reactive_loop</code>, <code>security/intent.py</code>, <code>agent_types.py</code>, and <code>planning/feasibility.py</code>. Every error node here is a real Python exception class, not a generic failure state — each maps to one HTTP status in <code>api/main.py</code>.</p>
+
+    <div class="note"><b>Honest note —</b> a real model doesn't always take the path its own answer implies. Episode 18's live run against gpt-4o-mini found a case where the answer text claimed a <code>query_graph</code> check that <code>tools_called</code> shows never happened. This flowchart is the code's logic, not a guarantee about what any one model call will choose to do inside it.</div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <p>Companion reference for <span class="fmono">saas_copilot</span> — 19 episodes, built and tested live.</p>
+      <p class="fmono">github.com/scheffershen/saas-support-copilot</p>
+    </div>
+  </footer>
+</main>
