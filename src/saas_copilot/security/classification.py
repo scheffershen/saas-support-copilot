@@ -28,9 +28,10 @@ def is_visible_to(path: str, role: str | None) -> bool:
 
     role=None (no caller identity available) is treated as "show everything" -
     a prototype convenience appropriate for a local, single-operator demo with no
-    auth layer yet (Episode 13 is where one arrives). A production system must
-    default the other way: no known identity means deny by default, not allow by
-    default. That flip is explicitly Episode 17's job, not silently done here.
+    auth layer yet (Episode 14 is where a role starts arriving from a real request,
+    via a header - not full auth, that's still Episode 17's job). A production system
+    must default the other way: no known identity means deny by default, not allow by
+    default. That flip is explicitly Episode 17's job too, not silently done here.
     """
     if role is None:
         return True

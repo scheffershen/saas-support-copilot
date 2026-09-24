@@ -1,5 +1,5 @@
 """ask(): the memory-aware entry point. Loads a session's history, runs the agent
-loop with it, records the new turn, saves. Episode 13's API calls this directly - it
+loop with it, records the new turn, saves. Episode 14's API calls this directly - it
 doesn't need to know sessions exist underneath.
 """
 from __future__ import annotations

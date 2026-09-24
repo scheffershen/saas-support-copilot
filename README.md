@@ -31,13 +31,23 @@ python -m sample_app.loopline.app.seed
 python -m uvicorn sample_app.loopline.app.main:app --reload --port 8001
 ```
 
-In another terminal, run the copilot itself (grows a real `/ask` endpoint from
-Episode 13 onward — today it's just a health check):
+In another terminal, run the copilot itself:
 
 ```bash
 python -m uvicorn saas_copilot.api.main:app --reload --port 8000
 curl http://localhost:8000/health
+
+curl -X POST http://localhost:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "demo", "question": "how do I create a ticket?"}'
 ```
+
+`/ask` needs a real LLM configured (`LLM_PROVIDER=openai` plus `LLM_API_KEY` in `.env`)
+to do anything useful — with the default `LLM_PROVIDER=fake`, it answers every
+question with the same fixed text, which is enough to exercise routing, tools, and
+citations, just not to actually answer anything. Pass a caller's role via
+`X-User-Role` (`support_agent`, `support_lead`, or `billing_admin`) to see
+role-restricted content, like the admin runbook, come and go.
 
 Run the tests (one is an intentional `xfail` — see [Episode 0](lessons/00-setup.md)):
 
