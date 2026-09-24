@@ -14,6 +14,7 @@ from ..graph.call_graph import CallGraph
 from ..retrieval.embeddings import EmbeddingClient
 from ..retrieval.hashing_embeddings import HashingEmbeddingClient
 from ..retrieval.index import DocumentIndex
+from ..security.roles import validate_role
 from .docs import SearchDocsArgs, load_docs, search_docs
 from .files import ListFilesArgs, list_files
 from .git_history import GitLogArgs, GitShowArgs, git_log, git_show
@@ -25,14 +26,29 @@ __all__ = ["ToolRegistry", "ToolSpec", "build_default_registry"]
 
 
 def build_default_registry(
-    settings: Settings, *, repo_root: Path, embedder: EmbeddingClient | None = None
+    settings: Settings,
+    *,
+    repo_root: Path,
+    embedder: EmbeddingClient | None = None,
+    role: str | None = None,
 ) -> ToolRegistry:
+    """`role` (Episode 10) is bound into search_docs here, at build time - never
+    accepted as a tool argument the model itself supplies (see docs.py). This
+    function rebuilds the doc index and call graph on every call, which is fine at
+    Loopline's tiny scale but means "role changes per request" and "build the
+    expensive stuff once at startup" are currently the same call - a real multi-user
+    server (Episode 14's job) would want to decouple those: build the shared index
+    once, and rebind only the cheap, per-request role.
+    """
+    if role is not None:
+        validate_role(role)
+
     docs_root = (repo_root / settings.loopline_docs_root).resolve()
     source_root = (repo_root / settings.loopline_source_root).resolve()
     loopline_scope = source_root.parent  # sample_app/loopline - covers app/, docs/, schema.sql, logs/
 
-    # Built once, here, not per query - the same reason the tool's allowlisted root
-    # is bound at registration time rather than re-resolved on every call.
+    # Built once per registry, not per query - the same reason the tool's allowlisted
+    # root is bound at registration time rather than re-resolved on every call.
     docs_index = DocumentIndex(load_docs(docs_root), embedder or HashingEmbeddingClient())
     call_graph = CallGraph(source_root)
 
@@ -42,7 +58,7 @@ def build_default_registry(
         name="search_docs",
         description="BM25 + semantic hybrid search over Loopline's end-user documentation.",
         args_schema=SearchDocsArgs,
-        handler=partial(search_docs, index=docs_index),
+        handler=partial(search_docs, index=docs_index, role=role),
     ))
     registry.register(ToolSpec(
         name="read_source",

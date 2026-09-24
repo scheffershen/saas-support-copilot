@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from saas_copilot.config import Settings
+from saas_copilot.security.roles import UnknownRoleError
 from saas_copilot.tools import build_default_registry
 from saas_copilot.tools.base import ToolError
 
@@ -17,8 +18,8 @@ REPO_ROOT = Path.cwd()
 SERVICES_FIX_COMMIT = "179fbb8fd8df2c7325deacbfd307a7187d4e767b"
 
 
-def _registry():
-    return build_default_registry(Settings(), repo_root=REPO_ROOT)
+def _registry(role: str | None = None):
+    return build_default_registry(Settings(), repo_root=REPO_ROOT, role=role)
 
 
 def test_default_registry_registers_all_seven_tools() -> None:
@@ -66,6 +67,26 @@ def test_git_log_through_the_registry() -> None:
 def test_git_show_through_the_registry() -> None:
     diff = _registry().call("git_show", {"commit": SERVICES_FIX_COMMIT})
     assert "is_active" in diff
+
+
+def test_search_docs_role_filtering_through_the_registry() -> None:
+    # role is bound into the tool at build time (functools.partial), not accepted as
+    # a call() argument - registry.call() only sees {"query": ...}, exactly what an
+    # LLM's tool-call JSON would contain, with no way to smuggle a different role in.
+    lead_results = _registry(role="support_lead").call(
+        "search_docs", {"query": "force-deactivate a compromised account"}
+    )
+    assert any(doc.path == "docs/admin-runbook.md" for doc in lead_results)
+
+    agent_results = _registry(role="support_agent").call(
+        "search_docs", {"query": "force-deactivate a compromised account"}
+    )
+    assert not any(doc.path == "docs/admin-runbook.md" for doc in agent_results)
+
+
+def test_build_default_registry_rejects_an_unknown_role() -> None:
+    with pytest.raises(UnknownRoleError):
+        _registry(role="superadmin")
 
 
 def test_registry_path_guard_still_holds_end_to_end() -> None:

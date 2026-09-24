@@ -39,3 +39,26 @@ def test_search_docs_raises_when_nothing_matches() -> None:
     # at all, not just avoid an exact keyword hit.
     with pytest.raises(ToolError, match="no documentation matched"):
         search_docs("zzqvxlpfmnbwortkugh", limit=10, index=_index())
+
+
+def test_search_docs_with_no_role_can_see_the_restricted_doc() -> None:
+    # role=None (the default) means "no known caller identity" - a prototype
+    # convenience, not a production-safe default. See security/classification.py.
+    results = search_docs("force-deactivate a compromised account", limit=10, index=_index())
+    assert any(doc.path == "docs/admin-runbook.md" for doc in results)
+
+
+def test_search_docs_with_an_authorized_role_can_see_the_restricted_doc() -> None:
+    results = search_docs(
+        "force-deactivate a compromised account", limit=10, index=_index(), role="support_lead"
+    )
+    assert any(doc.path == "docs/admin-runbook.md" for doc in results)
+
+
+def test_search_docs_with_an_unauthorized_role_never_returns_the_restricted_doc() -> None:
+    # Not "raises because nothing matches" - roles-and-permissions.md legitimately
+    # mentions "Deactivate users" in its own table and correctly still shows up for
+    # every role. The property that matters is narrower and more precise: whatever
+    # else comes back, the restricted doc specifically never does.
+    results = search_docs("force-deactivate a compromised account", limit=10, index=_index(), role="support_agent")
+    assert not any(doc.path == "docs/admin-runbook.md" for doc in results)
