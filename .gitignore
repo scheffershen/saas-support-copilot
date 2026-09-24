@@ -1,0 +1,31 @@
+# Local planning/working-memory files (see planning-with-files skill) — never publish these
+findings.md
+progress.md
+task_plan.md
+youtube_course_plan.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Databases
+*.db
+*.sqlite3
+
+# Caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
+Thumbs.db

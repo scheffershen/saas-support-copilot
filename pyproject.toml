@@ -1,0 +1,32 @@
+[project]
+name = "saas-copilot"
+version = "0.1.0"
+description = "A read-only support/dev copilot for the Loopline sample SaaS app (YouTube course capstone)."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "python-dotenv>=1.0",
+    "sqlalchemy>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+]
+mysql = [
+    "pymysql>=1.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/saas_copilot"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
