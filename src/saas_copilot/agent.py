@@ -10,6 +10,12 @@ Since Episode 11, this is only the *reactive* strategy - used for usage/bug/gene
 A `feature` question gets planning/feasibility.py's plan-first workflow instead,
 dispatched below once routing is known. Two different strategies, one shared result
 type and error hierarchy (agent_types.py), one public entry point (run_agent).
+
+Since Episode 12, run_agent() also checks *before* either strategy runs: a question
+phrased as a command ("Deactivate...") gets refused and escalated, never routed - see
+security/intent.py. "Can answer" and "can act" are different things, and nothing in
+this codebase can act - every tool is read-only - so a question asking the agent to
+act gets a refusal that says so, not an answer that quietly pretends otherwise.
 """
 from __future__ import annotations
 
@@ -32,6 +38,7 @@ from .answer import Answer
 from .llm.base import LLMClient, Message
 from .prompts import ANSWER_SYSTEM_PROMPT
 from .router import classify
+from .security.intent import CONFIRMATION_MARKER, build_refusal_answer, detect_destructive_intent
 from .specialists import Specialist, get_specialist
 from .structured import complete_structured
 from .tools.base import ToolError
@@ -108,6 +115,17 @@ def run_agent(
     if cancel_token is not None and cancel_token.is_set():
         raise AgentCancelledError("agent run was cancelled before it started")
 
+    # Checked before classify() ever runs, in code the model doesn't control - a
+    # command to perform an action ("Deactivate...") never reaches a specialist at
+    # all, let alone gets treated as an ordinary question to route and answer.
+    intent_match = detect_destructive_intent(question)
+    if intent_match is not None:
+        return AgentRunResult(answer=build_refusal_answer(intent_match), domain="general", steps_taken=0, tools_called=())
+
+    original_question = _confirmed_original_question(question, history)
+    if original_question is not None:
+        question = f"Explain how to do this, without performing it: {original_question}"
+
     decision = classify(client, question, history=history)
     specialist = get_specialist(decision.domain)
 
@@ -180,6 +198,33 @@ def _run_reactive_loop(
         messages.append(Message(role="user", content=observation))
 
     raise MaxStepsExceededError(f"exceeded max_steps={max_steps} without a final answer")
+
+
+_AFFIRMATIVE_RESPONSES = frozenset({
+    "yes", "yes please", "please do", "go ahead", "sure", "explain it",
+    "please explain", "ok explain", "yes explain", "yes, please explain",
+})
+
+
+def _confirmed_original_question(question: str, history: Sequence[Message]) -> str | None:
+    """If `question` is a short affirmative reply to THIS gate's own refusal - the
+    immediately preceding assistant turn carries CONFIRMATION_MARKER - return the
+    original question that triggered it, so the caller can go on to *explain* it,
+    never perform it. Reuses Episode 7's plain turn history; no new session-state
+    field. A bare "yes" with no matching refusal behind it confirms nothing and
+    returns None, falling through to ordinary (probably unroutable, and that's fine)
+    routing rather than being treated as an implicit confirmation of anything.
+    """
+    if question.strip().lower() not in _AFFIRMATIVE_RESPONSES:
+        return None
+    if len(history) < 2:
+        return None
+    previous_answer, previous_question = history[-1], history[-2]
+    if previous_answer.role != "assistant" or CONFIRMATION_MARKER not in previous_answer.content:
+        return None
+    if previous_question.role != "user":
+        return None
+    return previous_question.content
 
 
 def _initial_messages(

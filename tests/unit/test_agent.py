@@ -198,3 +198,57 @@ def test_respects_a_cancellation_token_set_before_the_run() -> None:
     client = FakeLLMClient(responses=[_route("bug"), _final_answer("bug", ["app/notifications.py"])])
     with pytest.raises(AgentCancelledError):
         run_agent(client, _registry(), "why does it crash?", cancel_token=cancel)
+
+
+def test_a_destructive_command_is_refused_without_calling_the_llm_at_all() -> None:
+    # The gate runs before classify() - a FakeLLMClient with a response scripted
+    # would fail this test loudly (wrong domain/answer) if the gate ever let the
+    # question through to be routed instead of refusing it outright.
+    client = FakeLLMClient(responses=[_route("usage")])
+
+    result = run_agent(client, _registry(), "Deactivate the account for bob@loopline.example")
+
+    assert result.answer.refused is True
+    assert result.domain == "general"
+    assert result.tools_called == ()
+    assert client.call_count == 0
+
+
+def test_a_how_to_phrased_version_of_the_same_topic_still_routes_normally() -> None:
+    client = FakeLLMClient(responses=[_route("usage"), _final_answer("usage", ["docs/admin-runbook.md"])])
+
+    result = run_agent(client, _registry(), "how do I deactivate a compromised account?")
+
+    assert result.answer.refused is False
+    assert client.call_count == 2
+
+
+def test_an_affirmative_followup_after_a_refusal_gets_explained_instead_of_performed() -> None:
+    original_question = "Deactivate the account for bob@loopline.example"
+    refusal = run_agent(FakeLLMClient(), _registry(), original_question)
+    assert refusal.answer.refused is True  # sanity check on the fixture below
+
+    history = [
+        Message(role="user", content=original_question),
+        Message(role="assistant", content=refusal.answer.answer),
+    ]
+    client = FakeLLMClient(responses=[_route("usage"), _final_answer("usage", ["docs/admin-runbook.md"])])
+
+    result = run_agent(client, _registry(), "yes please", history=history)
+
+    assert result.answer.refused is False
+    # the router saw the ORIGINAL question reframed as an explanation request, not
+    # the bare "yes please" (which alone would be unroutable) and not a command.
+    route_call_messages = client.received_messages[0]
+    assert any("deactivate" in m.content.lower() for m in route_call_messages)
+    assert any("without performing it" in m.content.lower() for m in route_call_messages)
+
+
+def test_a_bare_affirmative_with_no_preceding_refusal_is_not_treated_as_a_confirmation() -> None:
+    # "yes" only means something right after THIS gate's own refusal. Otherwise it's
+    # just an ordinary (here, deliberately unroutable-looking) question like any other.
+    client = FakeLLMClient(responses=[_route("general"), _final_answer("general", ["docs/getting-started.md"])])
+
+    result = run_agent(client, _registry(), "yes please")
+
+    assert client.received_messages[0][-1].content == "yes please"
