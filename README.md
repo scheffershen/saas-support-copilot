@@ -100,6 +100,11 @@ Start with [`lessons/00-setup.md`](lessons/00-setup.md) and finish with
 [the capstone](lessons/18-capstone-demonstration.md), which runs the whole system —
 citations, refusal, RBAC, evaluation, local deployment — against a real model.
 
+Every lesson is also available in full translation: [French](lessons/fr/00-setup.md)
+([`lessons/fr/`](lessons/fr/)) and [Chinese](lessons/zh/00-setup.md)
+([`lessons/zh/`](lessons/zh/)) — same code, commands, file paths, and citations as the
+English original, only the prose is translated.
+
 For a system-level map instead of an episode-by-episode one, see
 [`docs/copilot-blueprint.html`](docs/copilot-blueprint.html) — four diagrams (system
 boundary, request sequence, RAG pipeline, agent decision flowchart) read directly off
